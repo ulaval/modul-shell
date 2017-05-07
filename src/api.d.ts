@@ -4,7 +4,7 @@ export interface Shell {
     registerModule(moduleOptions: ModuleOptions);
     registerModules(modulesOptions: [ModuleOptions]);
     preloadModule(moduleName: string);
-    mountModule(moduleName: string, el: Element | string);
+    mountModule(moduleName: string);
     unmountModule(moduleName: string);
 
     // Inter-module Routing
@@ -14,12 +14,10 @@ export interface Shell {
     emit(message: string | Message, params?: any);
 
     // Security
-    currentIdentity(): Identity;
+    identity(): Identity;
 
     // Audit
-    auditNavigation(event: NavigationEvent);
-    auditAction(event: ActionEvent);
-    auditError(event: ErrorEvent);
+    audit(event: AuditEvent);
 
     // Analytics
     ga(): UniversalAnalytics.ga;
@@ -30,18 +28,22 @@ export interface Message {
     params: any;
 }
 
-export interface ErrorEvent {
+export interface AuditEvent {
+
+}
+
+export interface ErrorEvent extends AuditEvent {
     idError: string;
     url: string;
     error: Error;
 }
 
-export interface ActionEvent {
+export interface ActionEvent extends AuditEvent {
     action: string;
     [params: string]: string;
 }
 
-export interface NavigationEvent {
+export interface NavigationEvent extends AuditEvent {
     srcUrl: string;
     destUrl: string;
 }
@@ -75,4 +77,7 @@ export interface ModuleOptions {
     moduleName: string;
     rootPath: string;
     scriptSrc: string;
+    rootElement: Element;
+    idRootElement: string;
+    [otherParams: string]: any;
 }
