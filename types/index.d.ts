@@ -313,15 +313,15 @@ declare module "@ulaval/shell-ui" {
         moduleName: string;
 
         /**
+         * A callback to load the module or an URL to dynamically load a javascript.
+         */
+        load: ((options: DynamicModuleOptions)=>Promise<DynamicModule>) | string;
+
+        /**
          * The root path of the module. For example: '/courses'.
          * Modules are not always mounted on navigation, they can be explicitly mounted by another module.
          */
         rootPath?: string;
-
-        /**
-         * The url to download the loading script.
-         */
-        scriptSrc: string;
 
         /**
          * Where to mount the module.
