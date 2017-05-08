@@ -11,10 +11,11 @@
         "unit": "",
         "e2e": "",
         "test": "npm run unit && npm run e2e",
-        "tslint": "tslint -c conf/tslint.json -e 'src/**/*.d.ts' -e 'tests/unit/**/*.d.ts' -s node_modules/custom-tslint-formatters/formatters -t grouped 'src/**/*.ts' 'tests/unit/**/*.ts' 'tests/e2e/*.ts'"
+        "tslint": "tslint -c conf/tslint.json -e 'src/**/*.d.ts' -e 'tests/unit/**/*.d.ts' -s node_modules/custom-tslint-formatters/formatters -t grouped 'src/**/*.ts' 'tests/unit/**/*.ts' 'tests/e2e/*.ts'",
+        "setup": "npm install --no-optional"
     },
-    "dependencies": {
-    },
+    "typings": "types/api.d.ts",
+    "dependencies": {},
     "devDependencies": {
         "@types/node": "^7.0.16",
         "@types/es6-promise": "^0.0.32",
