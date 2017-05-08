@@ -57,6 +57,9 @@ export interface Identity {
     emailAdress: string;
     avatarUrl: string;
     expiration: Date;
+    // TODO: Check lang and colorBlind
+    lang: string;
+    colorBlind: boolean;
     token: string;
     attributes: [SecurityAttribute];
 }
