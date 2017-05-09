@@ -65,8 +65,8 @@ export class ShellImpl implements Shell {
 
             moduleState.loadingPromise = moduleState.options.load(moduleState.options)
                 .then(
-                    mod => this.onModuleLoaded(moduleState, mod),
-                    err => this.onModuleError(moduleState, err));
+                mod => this.onModuleLoaded(moduleState, mod),
+                err => this.onModuleError(moduleState, err));
         } else {
             moduleState.loadingPromise = loadScript(moduleState.options.load, 10000)
                 .then(() => window[moduleName]);
@@ -122,6 +122,7 @@ export class ShellImpl implements Shell {
             (err) => {
                 moduleState.state = State.LOADED;
                 moduleState.unmountingPromise = null;
+                this.auditError(`Error while unmounting module ${moduleState.options.moduleName}.`, err);
                 return err;
             }
         );
@@ -133,12 +134,9 @@ export class ShellImpl implements Shell {
         throw new Error('Not implemented');
     }
 
-    emit(event: AppEvent, params?: any) {
-        if (typeof event == 'string') {
-            event = {
-                eventType: event,
-                params: params
-            };
+    emit(event: AppEvent) {
+        if (!event) {
+            return;
         }
 
         for (let moduleName in this.registeredModules) {
@@ -154,7 +152,49 @@ export class ShellImpl implements Shell {
         return this.identityPromise || (this.identityPromise = this.identityProvider.load());
     }
 
-    audit(event: AppEvent) {
+    auditError(msg: string, err: any) {
+        let event = {
+            eventType: 'js',
+            params: {
+                err: err
+            }
+        };
+
+        this.auditMethod(event);
+    }
+
+    auditNavigation(srcUrl: string, destUrl: string) {
+        let event = {
+            eventType: 'navigation',
+            params: {
+                srcUrl,
+                destUrl
+            }
+        };
+
+        this.auditMethod(event);
+    }
+
+    auditRestError(serviceName: string, url: string, params: any, err: any) {
+        let event = {
+            eventType: 'rest',
+            params: {
+                serviceName,
+                url,
+                params,
+                err
+            }
+        };
+
+        this.auditMethod(event);
+    }
+
+    auditGenericEvent(eventType: string, params: any) {
+        let event = {
+            eventType,
+            params
+        };
+
         this.auditMethod(event);
     }
 
@@ -179,10 +219,10 @@ export class ShellImpl implements Shell {
         return module;
     }
 
-    private onModuleError(registeredModule: ModuleState, err): any {
-        registeredModule.loadingPromise = null;
-        registeredModule.state = State.REGISTERED;
-        this.audit(err);
+    private onModuleError(moduleState: ModuleState, err): any {
+        moduleState.loadingPromise = null;
+        moduleState.state = State.REGISTERED;
+        this.auditError(`Error while loading module ${moduleState.options.moduleName}.`, err);
         return err;
     }
 
@@ -201,7 +241,7 @@ export class ShellImpl implements Shell {
             (err) => {
                 moduleState.state = State.LOADED;
                 moduleState.mountingPromise = null;
-                this.audit(err);
+                this.auditError(`Error while mounting module ${moduleState.options.moduleName}.`, err);
                 return err;
             });
 

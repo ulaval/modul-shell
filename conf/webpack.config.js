@@ -18,10 +18,7 @@ module.exports = {
     },
 
     resolve: {
-        extensions: ['.js', '.ts', '.html'],
-        alias: {
-            'vue$': 'vue/dist/vue.esm.js'
-        }
+        extensions: ['.js', '.ts', '.html']
     },
 
     module: {
@@ -46,6 +43,11 @@ module.exports = {
         ]
     },
     plugins: [
+        new HtmlWebpackPlugin({
+            filename: 'index.html',
+            template: resolve('tests/index.html'),
+            inject: 'body'
+        }),
         new CompressionPlugin()
     ]
 }

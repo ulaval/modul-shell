@@ -3,5 +3,6 @@
     "editor.detectIndentation": false,
     "editor.tabSize": 4,
     "tslint.configFile": "conf/tslint.json",
-    "tslint.run": "onSave"
+    "tslint.run": "onSave",
+    "files.trimTrailingWhitespace": true
 }

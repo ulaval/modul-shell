@@ -42,12 +42,27 @@ declare module "@ulaval/shell-ui" {
         /**
          * Emits an event for other modules to consume.
          */
-        emit(event: string | AppEvent, params?: any);
+        emit(event: AppEvent);
 
         /**
-         * Audits an event. For example, an application error.
+         * Audits a javascript error.
          */
-        audit(event: AppEvent, params?: any);
+        auditError(msg: string, err: any);
+
+        /**
+         * Audits a web navigation.
+         */
+        auditNavigation(srcUrl: string, destUrl: string);
+
+        /**
+         * Audits an error while invoking a rest service.
+         */
+        auditRestError(serviceName: string, url: string, params: any, err: any);
+
+        /**
+         * Audit a generic event.
+         */
+        auditGenericEvent(eventType: string, params: any);
 
         /**
          * Gives access to the google analytics instance.
