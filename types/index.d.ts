@@ -17,7 +17,7 @@ declare module "@ulaval/shell-ui" {
         /**
          * Loads the module in advance so that it is ready to be mounted.
          */
-        preloadModule(moduleName: string): Promise<DynamicModule>;
+        loadModule(moduleName: string): Promise<DynamicModule>;
 
         /**
          * Activates the module, if the module is not loaded, it will be.
@@ -47,7 +47,7 @@ declare module "@ulaval/shell-ui" {
         /**
          * Audits an event. For example, an application error.
          */
-        audit(event: string | AppEvent, params?: any);
+        audit(event: AppEvent, params?: any);
 
         /**
          * Gives access to the google analytics instance.
@@ -334,5 +334,9 @@ declare module "@ulaval/shell-ui" {
          * Optional parameters to pass to the module while mounting the module.
          */
         params?: {[key: string]: any};
+    }
+
+    export interface Provider<T> {
+        load(): Promise<T>;
     }
 }

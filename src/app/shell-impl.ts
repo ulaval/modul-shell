@@ -1,4 +1,4 @@
-import { Shell, DynamicModule, DynamicModuleOptions, Identity, AppEvent } from "@ulaval/shell-ui"
+import { Provider, Shell, DynamicModule, DynamicModuleOptions, Identity, AppEvent } from '@ulaval/shell-ui';
 
 enum State {
     REGISTERED,
@@ -6,8 +6,7 @@ enum State {
     LOADED,
     MOUNTING,
     MOUNTED,
-    UNMOUNTING,
-    ERROR
+    UNMOUNTING
 }
 
 class ModuleState {
@@ -16,7 +15,7 @@ class ModuleState {
     module?: DynamicModule;
     loadingPromise?: Promise<DynamicModule> | null;
     mountingPromise?: Promise<DynamicModule> | null;
-    unmountingPromise?: Promise<void> | null;
+    unmountingPromise?: Promise<DynamicModule> | null;
     err?;
 
     constructor(
@@ -29,6 +28,16 @@ class ModuleState {
 export class ShellImpl implements Shell {
 
     private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
+    private identityPromise: Promise<Identity>;
+    private gaPromise: Promise<UniversalAnalytics.ga>;
+
+    public constructor(
+        public identityProvider: Provider<Identity>,
+        public auditMethod: (event: AppEvent) => void,
+        public gaProvider: Provider<UniversalAnalytics.ga>
+    ) {
+
+    }
 
     registerModule(moduleOptions: DynamicModuleOptions) {
         if (this.registeredModules[moduleOptions.moduleName]) {
@@ -51,16 +60,16 @@ export class ShellImpl implements Shell {
             return moduleState.loadingPromise;
         }
 
-        if (typeof moduleState.options.load === "function") {
+        if (typeof moduleState.options.load === 'function') {
             moduleState.state = State.LOADING;
 
             moduleState.loadingPromise = moduleState.options.load(moduleState.options)
                 .then(
-                mod => this.onModuleLoaded(moduleState, mod),
-                err => this.onModuleError(moduleState, err))
+                    mod => this.onModuleLoaded(moduleState, mod),
+                    err => this.onModuleError(moduleState, err));
         } else {
             moduleState.loadingPromise = loadScript(moduleState.options.load, 10000)
-                .then(() => window[moduleName])
+                .then(() => window[moduleName]);
         }
 
         return moduleState.loadingPromise;
@@ -77,8 +86,12 @@ export class ShellImpl implements Shell {
             return Promise.resolve(moduleState.module);
         }
 
-        if (moduleState.state == State.ERROR) {
-            return Promise.reject(moduleState.err);
+        if (moduleState.state == State.LOADED) {
+            return this.doMount(moduleState);
+        }
+
+        if (moduleState.loadingPromise) {
+            return moduleState.loadingPromise.then(() => this.doMount(moduleState));
         }
 
         if (moduleState.unmountingPromise) {
@@ -89,27 +102,64 @@ export class ShellImpl implements Shell {
     }
 
     unmountModule(moduleName: string): Promise<DynamicModule> {
-        return Promise.reject(new Error("Not implemented"));
+        let moduleState = this.get(moduleName);
+
+        if (moduleState.unmountingPromise) {
+            return moduleState.unmountingPromise;
+        }
+
+        if (moduleState.state != State.MOUNTED || !moduleState.module) {
+            throw new Error(`The module ${moduleName} is not mounted: ${moduleState.state}.`);
+        }
+
+        moduleState.state = State.UNMOUNTING;
+        moduleState.unmountingPromise = moduleState.module.unmount().then(
+            () => {
+                moduleState.state = State.LOADED;
+                moduleState.unmountingPromise = null;
+                return moduleState.module;
+            },
+            (err) => {
+                moduleState.state = State.LOADED;
+                moduleState.unmountingPromise = null;
+                return err;
+            }
+        );
+
+        return moduleState.unmountingPromise;
     }
 
     navigateTo(pathName: string) {
-
+        throw new Error('Not implemented');
     }
 
-    emit(message: string | AppEvent, params?: any) {
+    emit(event: AppEvent, params?: any) {
+        if (typeof event == 'string') {
+            event = {
+                eventType: event,
+                params: params
+            };
+        }
 
+        for (let moduleName in this.registeredModules) {
+            let moduleState = this.registeredModules[moduleName];
+
+            if (moduleState.state == State.MOUNTED && moduleState.module) {
+                moduleState.module.onEvent(event);
+            }
+        }
     }
 
     identity(): Promise<Identity> {
-        return Promise.reject(new Error("Not implemented"));
+        return this.identityPromise || (this.identityPromise = this.identityProvider.load());
     }
 
     audit(event: AppEvent) {
-        throw new Error("Not implemented");
+        this.auditMethod(event);
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
-        return Promise.reject(new Error("Not implemented"));
+        return this.gaPromise || (this.gaPromise = this.gaProvider.load());
     }
 
     private get(moduleName: string): ModuleState {
@@ -124,13 +174,15 @@ export class ShellImpl implements Shell {
 
     private onModuleLoaded(registeredModule: ModuleState, module: DynamicModule): DynamicModule {
         registeredModule.module = module;
+        registeredModule.loadingPromise = null;
         registeredModule.state = State.LOADED;
         return module;
     }
 
     private onModuleError(registeredModule: ModuleState, err): any {
-        registeredModule.err = err;
-        registeredModule.state = State.ERROR;
+        registeredModule.loadingPromise = null;
+        registeredModule.state = State.REGISTERED;
+        this.audit(err);
         return err;
     }
 
@@ -140,16 +192,18 @@ export class ShellImpl implements Shell {
         }
 
         moduleState.state = State.MOUNTING;
-        moduleState.mountingPromise = moduleState.module.mount(this).then(() => {
-            moduleState.state = State.MOUNTED;
-            moduleState.mountingPromise = null;
-            return moduleState.module
-        },
-        (err) => {
-            moduleState.state = State.ERROR;
-            moduleState.mountingPromise = null;
-            return err;
-        });
+        moduleState.mountingPromise = moduleState.module.mount(this).then(
+            () => {
+                moduleState.state = State.MOUNTED;
+                moduleState.mountingPromise = null;
+                return moduleState.module;
+            },
+            (err) => {
+                moduleState.state = State.LOADED;
+                moduleState.mountingPromise = null;
+                this.audit(err);
+                return err;
+            });
 
         return moduleState.mountingPromise;
     }
