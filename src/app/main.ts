@@ -1,19 +1,18 @@
-import './shell-ui';
-import Shell from '@ulaval/shell-ui';
+import {createShell, auditToConsole} from './shell-ui';
 
 console.info('Start');
 
 const identityProvider = () => { throw new Error('Not implemented'); };
-const auditMethod = () => { throw new Error('Not implemented'); };
+const auditMethod = auditToConsole;
 const gaProvider = () => { throw new Error('Not implemented'); };
 
-const shell = Shell.createShell(identityProvider, auditMethod, gaProvider);
+const shell = createShell(identityProvider, auditMethod, gaProvider);
 
 shell.registerModule({
-    moduleName: 'test',
-    rootElement: 'test',
-    load: 'http://localhost:8095',
-    rootPath: '/'
+    moduleName: 'mpoAdmission',
+    rootElement: 'adm',
+    load: 'http://localhost:8095/app.js',
+    rootPath: '/admission'
 });
 
-shell.mountModule('test');
+shell.mountModule('mpoAdmission').then((res) => console.info(res), (err) => console.warn(err));

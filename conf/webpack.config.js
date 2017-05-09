@@ -1,3 +1,4 @@
+const CompressionPlugin = require("compression-webpack-plugin")
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
 const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
@@ -19,8 +20,10 @@ module.exports = {
     },
 
     resolve: {
-        extensions: ['.js', '.ts', '.d.ts']
+        extensions: ['.js', '.ts', '.d.ts', '.html']
     },
+
+    devtool: 'source-map',
 
     module: {
         rules: [
@@ -52,7 +55,8 @@ module.exports = {
             template: resolve('tests/index.html'),
             inject: 'head'/*,
             inlineSource: 'app-min.js'*/
-        })/*,
-        new HtmlWebpackInlineSourcePlugin()*/
+        }),
+        /*new HtmlWebpackInlineSourcePlugin()*/
+        new CompressionPlugin()
     ]
 }
