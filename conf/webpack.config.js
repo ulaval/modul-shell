@@ -1,5 +1,6 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CompressionPlugin = require("compression-webpack-plugin")
+const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
+const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
 const path = require("path")
 
 function resolve(dir) {
@@ -14,11 +15,11 @@ module.exports = {
     output: {
         path: resolve('dist'),
         publicPath: "/",
-        filename: "app.js"
+        filename: "app-min.js"
     },
 
     resolve: {
-        extensions: ['.js', '.ts', '.html']
+        extensions: ['.js', '.ts', '.d.ts']
     },
 
     module: {
@@ -43,11 +44,15 @@ module.exports = {
         ]
     },
     plugins: [
+        new TsConfigPathsPlugin({
+            tsconfig: resolve('tsconfig.json')
+        }),
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: resolve('tests/index.html'),
-            inject: 'body'
-        }),
-        new CompressionPlugin()
+            inject: 'head'/*,
+            inlineSource: 'app-min.js'*/
+        })/*,
+        new HtmlWebpackInlineSourcePlugin()*/
     ]
 }

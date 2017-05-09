@@ -1,4 +1,4 @@
-import { Provider, Shell, DynamicModule, DynamicModuleOptions, Identity, AppEvent } from '@ulaval/shell-ui';
+import { Shell, DynamicModule, DynamicModuleOptions, Identity, AppEvent } from '@ulaval/shell-ui';
 
 enum State {
     REGISTERED,
@@ -32,9 +32,9 @@ export class ShellImpl implements Shell {
     private gaPromise: Promise<UniversalAnalytics.ga>;
 
     public constructor(
-        public identityProvider: Provider<Identity>,
+        public identityProvider: () => Promise<Identity>,
         public auditMethod: (event: AppEvent) => void,
-        public gaProvider: Provider<UniversalAnalytics.ga>
+        public gaProvider: () => Promise<UniversalAnalytics.ga>
     ) {
 
     }
@@ -149,7 +149,7 @@ export class ShellImpl implements Shell {
     }
 
     identity(): Promise<Identity> {
-        return this.identityPromise || (this.identityPromise = this.identityProvider.load());
+        return this.identityPromise || (this.identityPromise = this.identityProvider());
     }
 
     auditError(msg: string, err: any) {
@@ -199,7 +199,7 @@ export class ShellImpl implements Shell {
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
-        return this.gaPromise || (this.gaPromise = this.gaProvider.load());
+        return this.gaPromise || (this.gaPromise = this.gaProvider());
     }
 
     private get(moduleName: string): ModuleState {

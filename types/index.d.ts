@@ -1,5 +1,10 @@
 
 declare module "@ulaval/shell-ui" {
+    export var createShell: (
+        identityProvider: () => Promise<Identity>,
+        auditMethod: (event: AppEvent) => void,
+        gaProvider: () => Promise<UniversalAnalytics.ga>) => Shell;
+
     /**
      * Interface to cummunicate with the shell.
      */
@@ -349,9 +354,5 @@ declare module "@ulaval/shell-ui" {
          * Optional parameters to pass to the module while mounting the module.
          */
         params?: {[key: string]: any};
-    }
-
-    export interface Provider<T> {
-        load(): Promise<T>;
     }
 }
