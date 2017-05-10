@@ -11,14 +11,6 @@ export const auditToConsole = function(event: AppEvent) {
     console.warn(event);
 };
 
-export function auditToMpoAudit(urlMpoAudit: string): (event: AppEvent) => void {
-    return (event) => {
-        const req = new XMLHttpRequest();
-        req.open('POST', urlMpoAudit + '/journal', true);
-        req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
-        req.send('entree=' + encodeURIComponent(JSON.stringify(event)));
-    };
-}
 
 /**
  * Interface to cummunicate with the shell.
@@ -77,12 +69,12 @@ export interface Shell {
     /**
      * Audits an error while invoking a rest service.
      */
-    auditRestError(serviceName: string, url: string, params: any, err: any);
+    auditRestError(url: string, method: string, params: any, statusCode: number, errorId?: string, data?: any);
 
     /**
      * Audit a generic event.
      */
-    auditGenericEvent(eventType: string, params?: any);
+    auditEvent(event: AppEvent);
 
     /**
      * Gives access to the google analytics instance.
@@ -117,8 +109,20 @@ export interface DynamicModule {
  * Applicative event.
  */
 export interface AppEvent {
+    eventId: string;
     eventType: string;
-    params?: { [key: string]: any; };
+    msg?: string;
+    timestamp?: number;
+    userName?: string;
+    url?: string;
+    srcUrl?: string;
+    destUrl?: string;
+    err?: Error;
+    method?: string;
+    params?: any;
+    statusCode?: number;
+    data?: any;
+    [key: string]: any;
 }
 
 export interface Identity {
@@ -538,51 +542,67 @@ class ShellImpl implements Shell {
         return this.identityPromise || (this.identityPromise = this.identityProvider());
     }
 
-    auditError(msg: string, err: any) {
+    auditError(msg: string, err: any): AppEvent {
         let event = {
+            eventId: generateId(),
             eventType: 'js',
-            params: {
-                msg,
-                err
-            }
+            url: window.location.href,
+            msg,
+            err
         };
 
-        this.doAudit(event);
+        this.auditEvent(event);
+
+        return event;
     }
 
-    auditNavigation(srcUrl: string, destUrl: string) {
+    auditNavigation(srcUrl: string, destUrl: string): AppEvent {
         let event = {
-            eventType: 'navigation',
-            params: {
-                urlSource: srcUrl,
-                destUrl
-            }
+            eventId: generateId(),
+            eventType: 'nav',
+            srcUrl,
+            destUrl
         };
 
-        this.doAudit(event);
+        this.auditEvent(event);
+
+        return event;
     }
 
-    auditRestError(serviceName: string, url: string, params: any, err: any) {
+    auditRestError(url: string, method: string, params: any, statusCode: number, errorId?: string, data?: any): AppEvent {
         let event = {
+            eventId: errorId || generateId(),
             eventType: 'rest',
-            params: {
-                serviceName,
-                url,
-                params,
-                err
-            }
+            method,
+            params,
+            statusCode,
+            data
         };
 
-        this.doAudit(event);
+        this.auditEvent(event);
+
+        return event;
     }
 
-    auditGenericEvent(eventType: string, params: any) {
-        let event = {
-            eventType,
-            params
-        };
+    auditEvent(event: AppEvent) {
+        if (!event || !event.eventType) {
+            console.warn('The event is incomplete and will be ignored.');
+            console.warn(event);
+        }
 
-        this.doAudit(event);
+        if (!event.eventId) {
+            event.eventId = generateId();
+        }
+
+        event.timestamp = new Date().getTime();
+
+        this.identity().then(identity => {
+            if (identity && identity.currentUserName) {
+                event.userName = identity.currentUserName;
+            }
+
+            this.auditMethod(event);
+        });
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
@@ -611,16 +631,6 @@ class ShellImpl implements Shell {
         moduleState.state = State.REGISTERED;
         this.auditError(`Error while loading module ${moduleState.options.moduleName}.`, err);
         return err;
-    }
-
-    private doAudit(event): void {
-        this.identity().then(identity => {
-            if (identity && identity.currentUserName) {
-                event.userName = identity.currentUserName;
-            }
-
-            this.auditMethod(event);
-        });
     }
 
     private doMount(moduleState: ModuleState): Promise<DynamicModule> {
@@ -663,4 +673,8 @@ function loadScript(url, timeout): Promise<HTMLScriptElement> {
         }
         // window.setTimeout(() => reject(new Error(`Timeout while loading ${url}.`)), timeout);
     });
+}
+
+function generateId() {
+    return Math.random().toString(36).substring(2, 15);
 }

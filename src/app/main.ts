@@ -1,4 +1,5 @@
-import {createShell, auditToConsole} from './shell-ui';
+import {createShell} from './shell-ui';
+import {auditToMpoAudit} from './ul-integration';
 
 console.info('Start');
 
@@ -14,7 +15,7 @@ if (identityJson) {
 }
 
 const identityProvider = () => Promise.resolve(identity);
-const auditMethod = auditToConsole;
+const auditMethod = auditToMpoAudit('https://audit.monportail.test.ulaval.ca/audit/v1');
 const gaProvider = () => Promise.reject(new Error('Not implemented'));
 
 const shell = createShell(identityProvider, auditMethod, gaProvider);
@@ -28,4 +29,4 @@ shell.registerModule({
 
 shell.mountModule('mpoAdmission').then((res) => console.info(res), (err) => console.warn(err));
 
-shell.auditGenericEvent('test');
+shell.auditError('A bad thing happened.', new Error('Oh la la'));
