@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Shell-ui tests</title>
+
+    <script>
+        function onLogin() {
+            var login = document.getElementById('login').value;
+            var pwd = document.getElementById('pwd').value;
+
+            var identity = {
+                authenticated: true,
+                currentUserName: login,
+                user: {
+                    system: false,
+                    currentAccount: {
+                        accountType: 'email',
+                        userName: login
+                    },
+                    userIdsBySystem: {
+
+                    },
+                    accounts: [{
+                        accountType: 'email',
+                        userName: login
+                    }],
+                    givenName: 'Fred',
+                    familyName: 'P',
+                    primaryEmailAdress: 'fred.p@ulaval.ca',
+                    suspended: false,
+                    active: true,
+                    userPreferences: {
+                        lang: 'en',
+
+                    },
+                    accesses: [],
+                    changeNumber: 1
+                },
+                token: {
+                    tokenType: 'dummy',
+                    accessToken: '123',
+                    clientId: '123',
+                    expiration: new Date().setTime(new Date().getHours + 1)
+                }
+            }
+
+            localStorage.setItem('identity', JSON.stringify(identity));
+        }
+    </script>
+</head>
+
+<body>
+    <h2>Login</h2>
+    Username: <input id="login" type="text" /><br>
+    Password: <input id="pwd" type="password" /><br>
+    <button onclick="onLogin()">Go</button>
+</body>
+
+</html>

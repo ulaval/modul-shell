@@ -1,7 +1,6 @@
 const CompressionPlugin = require("compression-webpack-plugin")
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
-const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
 const path = require("path")
 
 function resolve(dir) {
@@ -47,8 +46,10 @@ module.exports = {
         ]
     },
     plugins: [
-        new TsConfigPathsPlugin({
-            tsconfig: resolve('tsconfig.json')
+        new HtmlWebpackPlugin({
+            filename: 'login.html',
+            template: resolve('tests/login.html'),
+            inject: false
         }),
         new HtmlWebpackPlugin({
             filename: 'index.html',

@@ -2,9 +2,20 @@ import {createShell, auditToConsole} from './shell-ui';
 
 console.info('Start');
 
-const identityProvider = () => { throw new Error('Not implemented'); };
+let identityJson = localStorage.getItem('identity');
+let identity;
+
+if (identityJson) {
+    identity = JSON.parse(identityJson);
+} else {
+    identity = {
+        authenticated: false
+    };
+}
+
+const identityProvider = () => Promise.resolve(identity);
 const auditMethod = auditToConsole;
-const gaProvider = () => { throw new Error('Not implemented'); };
+const gaProvider = () => Promise.reject(new Error('Not implemented'));
 
 const shell = createShell(identityProvider, auditMethod, gaProvider);
 
@@ -16,3 +27,5 @@ shell.registerModule({
 });
 
 shell.mountModule('mpoAdmission').then((res) => console.info(res), (err) => console.warn(err));
+
+shell.auditGenericEvent('test');

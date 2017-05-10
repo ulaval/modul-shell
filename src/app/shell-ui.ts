@@ -11,6 +11,15 @@ export const auditToConsole = function(event: AppEvent) {
     console.warn(event);
 };
 
+export function auditToMpoAudit(urlMpoAudit: string): (event: AppEvent) => void {
+    return (event) => {
+        const req = new XMLHttpRequest();
+        req.open('POST', urlMpoAudit + '/journal', true);
+        req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
+        req.send('entree=' + encodeURIComponent(JSON.stringify(event)));
+    };
+}
+
 /**
  * Interface to cummunicate with the shell.
  */
@@ -73,7 +82,7 @@ export interface Shell {
     /**
      * Audit a generic event.
      */
-    auditGenericEvent(eventType: string, params: any);
+    auditGenericEvent(eventType: string, params?: any);
 
     /**
      * Gives access to the google analytics instance.
@@ -117,6 +126,11 @@ export interface Identity {
      * If the current user is authenticated.
      */
     authenticated: boolean;
+
+    /**
+     * The user name used to open the session or 'anonymous' if not authenticated.
+     */
+    currentUserName: 'anonymous' | string;
 
     /**
      * The user if authenticated.
@@ -240,12 +254,12 @@ export interface UserPreferences {
     /**
      * Should we use the color blind version of the app.
      */
-    colorBlind: boolean;
+    colorBlind?: boolean;
 
     /**
      * Timezone to display date/times.
      */
-    timezone: string;
+    timezone?: string;
 }
 
 /**
@@ -533,19 +547,19 @@ class ShellImpl implements Shell {
             }
         };
 
-        this.auditMethod(event);
+        this.doAudit(event);
     }
 
     auditNavigation(srcUrl: string, destUrl: string) {
         let event = {
             eventType: 'navigation',
             params: {
-                srcUrl,
+                urlSource: srcUrl,
                 destUrl
             }
         };
 
-        this.auditMethod(event);
+        this.doAudit(event);
     }
 
     auditRestError(serviceName: string, url: string, params: any, err: any) {
@@ -559,7 +573,7 @@ class ShellImpl implements Shell {
             }
         };
 
-        this.auditMethod(event);
+        this.doAudit(event);
     }
 
     auditGenericEvent(eventType: string, params: any) {
@@ -568,7 +582,7 @@ class ShellImpl implements Shell {
             params
         };
 
-        this.auditMethod(event);
+        this.doAudit(event);
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
@@ -597,6 +611,16 @@ class ShellImpl implements Shell {
         moduleState.state = State.REGISTERED;
         this.auditError(`Error while loading module ${moduleState.options.moduleName}.`, err);
         return err;
+    }
+
+    private doAudit(event): void {
+        this.identity().then(identity => {
+            if (identity && identity.currentUserName) {
+                event.userName = identity.currentUserName;
+            }
+
+            this.auditMethod(event);
+        });
     }
 
     private doMount(moduleState: ModuleState): Promise<DynamicModule> {
