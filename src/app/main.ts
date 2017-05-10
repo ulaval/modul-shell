@@ -1,20 +1,10 @@
 import {createShell} from './shell-ui';
-import {auditToMpoAudit} from './ul-integration';
+import {createLocalStorageIdentityProvider} from './dev';
+import {auditToMpoAudit, authenticateWithMpoPortail} from './ul-integration';
 
 console.info('Start');
 
-let identityJson = localStorage.getItem('identity');
-let identity;
-
-if (identityJson) {
-    identity = JSON.parse(identityJson);
-} else {
-    identity = {
-        authenticated: false
-    };
-}
-
-const identityProvider = () => Promise.resolve(identity);
+const identityProvider = createLocalStorageIdentityProvider();
 const auditMethod = auditToMpoAudit('https://audit.monportail.test.ulaval.ca/audit/v1');
 const gaProvider = () => Promise.reject(new Error('Not implemented'));
 
@@ -30,3 +20,6 @@ shell.registerModule({
 shell.mountModule('mpoAdmission').then((res) => console.info(res), (err) => console.warn(err));
 
 shell.auditError('A bad thing happened.', new Error('Oh la la'));
+
+authenticateWithMpoPortail('https://monportail.testpr.ulaval.ca', 'adsy1', '')
+    .then(res => console.info(res));

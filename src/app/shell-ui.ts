@@ -1,16 +1,11 @@
 
 export const createShell = function(
-        identityProvider: () => Promise<Identity>,
+        identityProvider: IdentityProvider,
         auditMethod: (event: AppEvent) => void,
         gaProvider: () => Promise<UniversalAnalytics.ga>): Shell {
 
     return new ShellImpl(identityProvider, auditMethod, gaProvider);
 };
-
-export const auditToConsole = function(event: AppEvent) {
-    console.warn(event);
-};
-
 
 /**
  * Interface to cummunicate with the shell.
@@ -47,6 +42,11 @@ export interface Shell {
     identity(): Promise<Identity>;
 
     /**
+     * To force a logout.
+     */
+    logout();
+
+    /**
      * Allows a module to give control to another module.
      */
     navigateTo(pathName: string);
@@ -80,6 +80,11 @@ export interface Shell {
      * Gives access to the google analytics instance.
      */
     ga(): Promise<UniversalAnalytics.ga>;
+}
+
+export interface IdentityProvider {
+    identity(): Promise<Identity>;
+    logout(): void;
 }
 
 /**
@@ -178,7 +183,7 @@ export interface User {
      *
      * For example, a Google and Facebook accounts.
      */
-    accounts: [Account];
+    accounts: Account[];
 
     /**
      * User's first name.
@@ -228,7 +233,7 @@ export interface User {
     /**
      * List of access granted to the current user.
      */
-    accesses: [Access];
+    accesses: Access[];
 
     /**
      * The change number increments each time a user is changed.
@@ -408,11 +413,9 @@ class ModuleState {
 class ShellImpl implements Shell {
 
     private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
-    private identityPromise: Promise<Identity>;
-    private gaPromise: Promise<UniversalAnalytics.ga>;
 
     public constructor(
-        public identityProvider: () => Promise<Identity>,
+        public identityProvider: IdentityProvider,
         public auditMethod: (event: AppEvent) => void,
         public gaProvider: () => Promise<UniversalAnalytics.ga>
     ) {
@@ -539,7 +542,11 @@ class ShellImpl implements Shell {
     }
 
     identity(): Promise<Identity> {
-        return this.identityPromise || (this.identityPromise = this.identityProvider());
+        return this.identityProvider.identity();
+    }
+
+    logout(): void {
+        this.identityProvider.logout();
     }
 
     auditError(msg: string, err: any): AppEvent {
@@ -606,7 +613,7 @@ class ShellImpl implements Shell {
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
-        return this.gaPromise || (this.gaPromise = this.gaProvider());
+        return this.gaProvider();
     }
 
     private get(moduleName: string): ModuleState {
