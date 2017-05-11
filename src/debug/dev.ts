@@ -1,4 +1,4 @@
-import { Identity, IdentityProvider, AppEvent } from './shell-ui';
+import { GaProvider, Identity, IdentityProvider, AppEvent } from '../app/shell-ui';
 
 export const auditToConsole = function(event: AppEvent) {
     console.warn(event);
@@ -6,6 +6,22 @@ export const auditToConsole = function(event: AppEvent) {
 
 export function createLocalStorageIdentityProvider(key: string = 'identity'): IdentityProvider {
     return new LocalStorageIdentityProvider(key);
+}
+
+export function createDummyGaProvider(): GaProvider {
+    return new DummyGaProvider();
+}
+
+export default {
+    auditToConsole,
+    createLocalStorageIdentityProvider,
+    createDummyGaProvider
+};
+
+class DummyGaProvider implements GaProvider {
+    ga(): Promise<UniversalAnalytics.ga> {
+        return Promise.reject(new Error('Not implemented'));
+    }
 }
 
 class LocalStorageIdentityProvider implements IdentityProvider {

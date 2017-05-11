@@ -1,10 +1,10 @@
 
 export const createShell = function(
-        identityProvider: IdentityProvider,
-        auditMethod: (event: AppEvent) => void,
-        gaProvider: () => Promise<UniversalAnalytics.ga>): Shell {
+    identityProvider: IdentityProvider,
+    auditProvider: AuditProvider,
+    gaProvider: GaProvider): Shell {
 
-    return new ShellImpl(identityProvider, auditMethod, gaProvider);
+    return new ShellImpl(identityProvider, auditProvider, gaProvider);
 };
 
 /**
@@ -85,6 +85,14 @@ export interface Shell {
 export interface IdentityProvider {
     identity(): Promise<Identity>;
     logout(): void;
+}
+
+export interface AuditProvider {
+    audit(event: AppEvent): void;
+}
+
+export interface GaProvider {
+    ga(): Promise<UniversalAnalytics.ga>;
 }
 
 /**
@@ -364,7 +372,7 @@ export interface DynamicModuleOptions {
     /**
      * A callback to load the module or an URL to dynamically load a javascript.
      */
-    load: ((options: DynamicModuleOptions) => Promise<DynamicModule>) | string;
+    load: (() => Promise<DynamicModule>) | string;
 
     /**
      * The root path of the module. For example: '/courses'.
@@ -377,7 +385,7 @@ export interface DynamicModuleOptions {
      * A module don't always need an element to be mounted. Some modules can stay hidden
      * or create their own elements.
      */
-    rootElement?: Element | string;
+    rootElement?: HTMLElement | string;
 
     /**
      * Optional parameters to pass to the module while mounting the module.
@@ -413,11 +421,12 @@ class ModuleState {
 class ShellImpl implements Shell {
 
     private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
+    private currentPathModule: ModuleState;
 
     public constructor(
         public identityProvider: IdentityProvider,
-        public auditMethod: (event: AppEvent) => void,
-        public gaProvider: () => Promise<UniversalAnalytics.ga>
+        public auditProvider: AuditProvider,
+        public gaProvider: GaProvider
     ) {
 
     }
@@ -446,7 +455,7 @@ class ShellImpl implements Shell {
         if (typeof moduleState.options.load === 'function') {
             moduleState.state = State.LOADING;
 
-            moduleState.loadingPromise = moduleState.options.load(moduleState.options)
+            moduleState.loadingPromise = moduleState.options.load()
                 .then(
                 mod => this.onModuleLoaded(moduleState, mod),
                 err => {
@@ -456,13 +465,13 @@ class ShellImpl implements Shell {
         } else {
             moduleState.loadingPromise = loadScript(moduleState.options.load, 10000)
                 .then(
-                    mod => {
-                        return this.onModuleLoaded(moduleState, window[moduleName]);
-                    },
-                    err => {
-                        this.onModuleError(moduleState, err);
-                        throw err;
-                    });
+                mod => {
+                    return this.onModuleLoaded(moduleState, window[moduleName]);
+                },
+                err => {
+                    this.onModuleError(moduleState, err);
+                    throw err;
+                });
         }
 
         return moduleState.loadingPromise;
@@ -524,7 +533,24 @@ class ShellImpl implements Shell {
     }
 
     navigateTo(pathName: string) {
-        throw new Error('Not implemented');
+        let mount = () => {
+            history.pushState(undefined, '', pathName);
+
+            for (let moduleName in this.registeredModules) {
+                let moduleState = this.registeredModules[moduleName];
+
+                if (moduleState.options.rootPath && moduleState.options.rootPath.indexOf(pathName) === 0) {
+                    this.mountModule(moduleName);
+                    return;
+                }
+            }
+        };
+
+        if (this.currentPathModule) {
+            this.unmountModule(this.currentPathModule.options.moduleName).then(mount);
+        } else {
+            mount();
+        }
     }
 
     emit(event: AppEvent) {
@@ -608,12 +634,12 @@ class ShellImpl implements Shell {
                 event.userName = identity.currentUserName;
             }
 
-            this.auditMethod(event);
+            this.auditProvider.audit(event);
         });
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
-        return this.gaProvider();
+        return this.gaProvider.ga();
     }
 
     private get(moduleName: string): ModuleState {
@@ -645,6 +671,10 @@ class ShellImpl implements Shell {
             throw new Error(`The module ${moduleState.options.moduleName} is not loaded.`);
         }
 
+        if (moduleState.options.rootPath) {
+            this.currentPathModule = moduleState;
+        }
+
         moduleState.state = State.MOUNTING;
         moduleState.mountingPromise = moduleState.module.mount(this, moduleState.options).then(
             () => {
@@ -656,7 +686,7 @@ class ShellImpl implements Shell {
                 moduleState.state = State.LOADED;
                 moduleState.mountingPromise = null;
                 this.auditError(`Error while mounting module ${moduleState.options.moduleName}.`, err);
-                return err;
+                throw err;
             });
 
         return moduleState.mountingPromise;
@@ -676,7 +706,7 @@ function loadScript(url, timeout): Promise<HTMLScriptElement> {
             script.onerror = (err) => reject(err);
             head.appendChild(script);
         } catch (e) {
-            reject (e);
+            reject(e);
         }
         // window.setTimeout(() => reject(new Error(`Timeout while loading ${url}.`)), timeout);
     });

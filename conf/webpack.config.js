@@ -9,7 +9,7 @@ function resolve(dir) {
 
 module.exports = {
     entry: {
-        app: ["./src/app/main.ts"]
+        app: ["./src/debug/main.ts"]
     },
 
     output: {
@@ -53,8 +53,8 @@ module.exports = {
         }),
         new HtmlWebpackPlugin({
             filename: 'index.html',
-            template: resolve('tests/index.html'),
-            inject: 'head'/*,
+            template: resolve('src/debug/index.html'),
+            inject: 'body'/*,
             inlineSource: 'app-min.js'*/
         }),
         /*new HtmlWebpackInlineSourcePlugin()*/
