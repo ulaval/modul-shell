@@ -1,5 +1,5 @@
 import { createShell } from '../app/shell-ui';
-import {LoginModule} from './login';
+import {LoginPackage} from './login';
 import dev from './dev';
 import mpo from '../mpo';
 
@@ -9,14 +9,14 @@ const gaService = dev.createDummyGaService();
 
 const shell = createShell(identityService, auditService, gaService);
 
-shell.registerModules([{
-    moduleName: 'login',
+shell.registerPackages([{
+    packageName: 'login',
     rootElement: 'log',
-    load: () => Promise.resolve(new LoginModule()),
+    load: () => Promise.resolve(new LoginPackage()),
     rootPath: '/login'
 },
 {
-    moduleName: 'mpoAdmission',
+    packageName: 'mpoAdmission',
     rootElement: 'adm',
     load: 'http://localhost:8095/app.js',
     rootPath: '/'

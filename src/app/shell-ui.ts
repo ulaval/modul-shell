@@ -12,42 +12,42 @@ export const createShell = function(
  */
 export interface Shell {
     /**
-     * Register a new dynamic module so that it can be loaded and mounted.
+     * Register a new package so that it can be loaded and mounted.
      */
-    registerModule(moduleOptions: DynamicModuleOptions);
+    registerPackage(packageOptions: PackageOptions);
 
     /**
-     * Register a series of new dynamic modules so that they can be loaded and mounted.
+     * Register a series of new packages so that they can be loaded and mounted.
      */
-    registerModules(modulesOptions: [DynamicModuleOptions]);
+    registerPackages(packagesOptions: [PackageOptions]);
 
     /**
-     * Loads the module in advance so that it is ready to be mounted.
+     * Loads the package in advance so that it is ready to be mounted.
      */
-    loadModule(moduleName: string): Promise<DynamicModule>;
+    loadPackage(packageName: string): Promise<Package>;
 
     /**
-     * Activates the module, if the module is not loaded, it will be.
+     * Activates the package, if the package is not loaded, it will be.
      */
-    mountModule(moduleName: string): Promise<DynamicModule>;
+    mountPackage(packageName: string): Promise<Package>;
 
     /**
-     * Puts a module back in the loaded state.
+     * Puts a package back in the loaded state.
      */
-    unmountModule(moduleName: string): Promise<DynamicModule>;
+    unmountPackage(packageName: string): Promise<Package>;
 
     /**
-     * Initiates the shell and loads the fist module according to the current URL.
+     * Initiates the shell and loads the fist package according to the current URL.
      */
     start();
 
     /**
-     * Allows to navigate between modules.
+     * Allows to navigate between packages.
      */
     navigateTo(pathName: string);
 
     /**
-     * Emits an event for other modules to consume.
+     * Emits an event for other packages to consume.
      */
     emit(eventType: string, params?: any);
 
@@ -101,19 +101,19 @@ export interface AnalyticsService {
 }
 
 /**
- * A dynamically loaded module needs to implement this interface to
+ * A dynamically loaded package needs to implement this interface to
  * work properly with the shell.
  */
-export interface DynamicModule {
+export interface Package {
     /**
-     * Mounts the module into action.
+     * Mounts the package into action.
      *
-     * The module needs to be in the loaded state for this to work.
+     * The package needs to be in the loaded state for this to work.
      */
-    mount(shell: Shell, options: DynamicModuleOptions): Promise<void>;
+    mount(shell: Shell, options: PackageOptions): Promise<void>;
 
     /**
-     * Takes a mounted modules and puts it back into the loaded state.
+     * Takes a mounted package and puts it back into the loaded state.
      */
     unmount(): Promise<void>;
 
@@ -348,32 +348,32 @@ export interface Access {
     direct: boolean;
 }
 
-export interface DynamicModuleOptions {
+export interface PackageOptions {
     /**
-     * The module name. This needs to be unique.
+     * The package name. This needs to be unique.
      */
-    moduleName: string;
+    packageName: string;
 
     /**
-     * A callback to load the module or an URL to dynamically load a javascript.
+     * A callback to load the package or an URL to dynamically load a javascript.
      */
-    load: (() => Promise<DynamicModule>) | string;
+    load: (() => Promise<Package>) | string;
 
     /**
-     * The root path of the module. For example: '/courses'.
-     * Modules are not always mounted on navigation, they can be explicitly mounted by another module.
+     * The root path of the package. For example: '/courses'.
+     * Packages are not always mounted on navigation, they can be explicitly mounted by another package.
      */
     rootPath?: string;
 
     /**
-     * Where to mount the module.
-     * A module don't always need an element to be mounted. Some modules can stay hidden
+     * Where to mount the package.
+     * A package don't always need an element to be mounted. Some packages can stay hidden
      * or create their own elements.
      */
     rootElement?: HTMLElement | string;
 
     /**
-     * Optional parameters to pass to the module while mounting the module.
+     * Optional parameters to pass to the package while mounting.
      */
     params?: { [key: string]: any };
 }
@@ -387,17 +387,17 @@ enum State {
     UNMOUNTING
 }
 
-class ModuleState {
+class PackageState {
 
     state: State = State.REGISTERED;
-    module?: DynamicModule;
-    loadingPromise?: Promise<DynamicModule> | null;
-    mountingPromise?: Promise<DynamicModule> | null;
-    unmountingPromise?: Promise<DynamicModule> | null;
+    package?: Package;
+    loadingPromise?: Promise<Package> | null;
+    mountingPromise?: Promise<Package> | null;
+    unmountingPromise?: Promise<Package> | null;
     err?;
 
     constructor(
-        public options: DynamicModuleOptions
+        public options: PackageOptions
     ) {
 
     }
@@ -407,8 +407,8 @@ class ShellImpl implements Shell {
     private readonly identityService: IdentityService;
     private readonly auditService: AuditService;
     private readonly analyticsService: AnalyticsService;
-    private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
-    private currentPathModule: ModuleState;
+    private readonly registeredPackages: { [packageName: string]: PackageState } = {};
+    private currentPackage: PackageState;
 
     public constructor(
         identityServiceFactory: (shell: Shell) => IdentityService,
@@ -420,110 +420,110 @@ class ShellImpl implements Shell {
         this.analyticsService = analyticsServiceFactory(this);
     }
 
-    registerModule(moduleOptions: DynamicModuleOptions) {
-        if (this.registeredModules[moduleOptions.moduleName]) {
-            throw new Error(`Module + ${moduleOptions.moduleName} is already registered.`);
+    registerPackage(packageOptions: PackageOptions) {
+        if (this.registeredPackages[packageOptions.packageName]) {
+            throw new Error(`Package + ${packageOptions.packageName} is already registered.`);
         }
 
-        this.registeredModules[moduleOptions.moduleName] = new ModuleState(moduleOptions);
+        this.registeredPackages[packageOptions.packageName] = new PackageState(packageOptions);
     }
 
-    registerModules(modulesOptions: [DynamicModuleOptions]) {
-        for (let i = 0; i < modulesOptions.length; ++i) {
-            this.registerModule(modulesOptions[i]);
+    registerPackages(packagesOptions: [PackageOptions]) {
+        for (let i = 0; i < packagesOptions.length; ++i) {
+            this.registerPackage(packagesOptions[i]);
         }
     }
 
-    loadModule(moduleName: string): Promise<DynamicModule> {
-        let moduleState = this.get(moduleName);
+    loadPackage(packageName: string): Promise<Package> {
+        let packageState = this.get(packageName);
 
-        if (moduleState.loadingPromise) {
-            return moduleState.loadingPromise;
+        if (packageState.loadingPromise) {
+            return packageState.loadingPromise;
         }
 
-        if (typeof moduleState.options.load === 'function') {
-            moduleState.state = State.LOADING;
+        if (typeof packageState.options.load === 'function') {
+            packageState.state = State.LOADING;
 
-            moduleState.loadingPromise = moduleState.options.load()
+            packageState.loadingPromise = packageState.options.load()
                 .then(
-                mod => this.onModuleLoaded(moduleState, mod),
+                mod => this.onPackageLoaded(packageState, mod),
                 err => {
-                    this.onModuleError(moduleState, err);
+                    this.onPackageError(packageState, err);
                     throw err;
                 });
         } else {
-            moduleState.loadingPromise = loadScript(moduleState.options.load, 10000)
+            packageState.loadingPromise = loadScript(packageState.options.load, 10000)
                 .then(
                 mod => {
-                    return this.onModuleLoaded(moduleState, window[moduleName]);
+                    return this.onPackageLoaded(packageState, window[packageName]);
                 },
                 err => {
-                    this.onModuleError(moduleState, err);
+                    this.onPackageError(packageState, err);
                     throw err;
                 });
         }
 
-        return moduleState.loadingPromise;
+        return packageState.loadingPromise;
     }
 
-    mountModule(moduleName: string): Promise<DynamicModule> {
-        let moduleState = this.get(moduleName);
+    mountPackage(packageName: string): Promise<Package> {
+        let packageState = this.get(packageName);
 
-        if (moduleState.mountingPromise) {
-            return moduleState.mountingPromise;
+        if (packageState.mountingPromise) {
+            return packageState.mountingPromise;
         }
 
-        if (moduleState.state == State.MOUNTED) {
-            return Promise.resolve(moduleState.module);
+        if (packageState.state == State.MOUNTED) {
+            return Promise.resolve(packageState.package);
         }
 
-        if (moduleState.state == State.LOADED) {
-            return this.doMount(moduleState);
+        if (packageState.state == State.LOADED) {
+            return this.doMount(packageState);
         }
 
-        if (moduleState.loadingPromise) {
-            return moduleState.loadingPromise.then(() => this.doMount(moduleState), (err) => { throw err; });
+        if (packageState.loadingPromise) {
+            return packageState.loadingPromise.then(() => this.doMount(packageState), (err) => { throw err; });
         }
 
-        if (moduleState.unmountingPromise) {
-            return moduleState.unmountingPromise.then(() => this.doMount(moduleState), (err) => { throw err; });
+        if (packageState.unmountingPromise) {
+            return packageState.unmountingPromise.then(() => this.doMount(packageState), (err) => { throw err; });
         }
 
-        return this.loadModule(moduleName).then(() => this.doMount(moduleState), (err) => { throw err; });
+        return this.loadPackage(packageName).then(() => this.doMount(packageState), (err) => { throw err; });
     }
 
-    unmountModule(moduleName: string): Promise<DynamicModule> {
-        let moduleState = this.get(moduleName);
+    unmountPackage(packageName: string): Promise<Package> {
+        let packageState = this.get(packageName);
 
-        if (moduleState.unmountingPromise) {
-            return moduleState.unmountingPromise;
+        if (packageState.unmountingPromise) {
+            return packageState.unmountingPromise;
         }
 
-        if (moduleState.state != State.MOUNTED || !moduleState.module) {
-            return Promise.reject(new Error(`The module ${moduleName} is not mounted: ${moduleState.state}.`));
+        if (packageState.state != State.MOUNTED || !packageState.package) {
+            return Promise.reject(new Error(`The package ${packageName} is not mounted: ${packageState.state}.`));
         }
 
-        moduleState.state = State.UNMOUNTING;
-        moduleState.unmountingPromise = moduleState.module.unmount().then(
+        packageState.state = State.UNMOUNTING;
+        packageState.unmountingPromise = packageState.package.unmount().then(
             () => {
-                moduleState.state = State.LOADED;
-                moduleState.unmountingPromise = null;
-                return moduleState.module;
+                packageState.state = State.LOADED;
+                packageState.unmountingPromise = null;
+                return packageState.package;
             },
             (err) => {
-                moduleState.state = State.LOADED;
-                moduleState.unmountingPromise = null;
-                this.audit().auditError('0', `Error while unmounting module ${moduleState.options.moduleName}.`, err);
+                packageState.state = State.LOADED;
+                packageState.unmountingPromise = null;
+                this.audit().auditError('0', `Error while unmounting package ${packageState.options.packageName}.`, err);
                 return err;
             }
         );
 
-        return moduleState.unmountingPromise;
+        return packageState.unmountingPromise;
     }
 
     navigateTo(path: string) {
         history.pushState(path, path, path);
-        this.showCurrentModule();
+        this.showCurrentPackage();
     }
 
     emit(eventType: string, params?: any) {
@@ -531,11 +531,11 @@ class ShellImpl implements Shell {
             return;
         }
 
-        for (let moduleName in this.registeredModules) {
-            let moduleState = this.registeredModules[moduleName];
+        for (let packageName in this.registeredPackages) {
+            let packageState = this.registeredPackages[packageName];
 
-            if (moduleState.state == State.MOUNTED && moduleState.module) {
-                moduleState.module.onEvent(eventType, params);
+            if (packageState.state == State.MOUNTED && packageState.package) {
+                packageState.package.onEvent(eventType, params);
             }
         }
     }
@@ -543,9 +543,9 @@ class ShellImpl implements Shell {
     start() {
         window.addEventListener('popstate', (ev) => {
             // Required to prevent the browser from overriding the url
-            window.setTimeout(() => this.showCurrentModule(), 1);
+            window.setTimeout(() => this.showCurrentPackage(), 1);
         });
-        this.showCurrentModule();
+        this.showCurrentPackage();
     }
 
     identity(): IdentityService {
@@ -560,96 +560,96 @@ class ShellImpl implements Shell {
         return this.analyticsService;
     }
 
-    private showCurrentModule() {
+    private showCurrentPackage() {
         let path = window.location.pathname;
 
-        let moduleState = this.findModuleByPath(path);
+        let packageState = this.findPackageByPath(path);
 
-        if (moduleState == null) {
+        if (packageState == null) {
             this.navigateTo('/');
             return;
         }
 
-        if (this.currentPathModule === moduleState) {
+        if (this.currentPackage === packageState) {
             return;
         }
 
-        if (this.currentPathModule) {
-            this.unmountModule(this.currentPathModule.options.moduleName)
+        if (this.currentPackage) {
+            this.unmountPackage(this.currentPackage.options.packageName)
                 .then(
-                    () => this.mountModule((moduleState as ModuleState).options.moduleName),
-                    () => this.mountModule((moduleState as ModuleState).options.moduleName));
+                    () => this.mountPackage((packageState as PackageState).options.packageName),
+                    () => this.mountPackage((packageState as PackageState).options.packageName));
         } else {
-            this.mountModule(moduleState.options.moduleName);
+            this.mountPackage(packageState.options.packageName);
         }
     }
 
-    private findModuleByPath(path: string): ModuleState | null {
+    private findPackageByPath(path: string): PackageState | null {
         let bestMatchLength = 0;
-        let bestMatch: ModuleState | null = null;
+        let bestMatch: PackageState | null = null;
 
-        for (let moduleName in this.registeredModules) {
-            let moduleState = this.registeredModules[moduleName];
+        for (let packageName in this.registeredPackages) {
+            let packageState = this.registeredPackages[packageName];
 
-            if (moduleState.options.rootPath
-                && moduleState.options.rootPath.length > bestMatchLength
-                && path.indexOf(moduleState.options.rootPath) === 0) {
-                bestMatchLength = moduleState.options.rootPath.length;
-                bestMatch = moduleState;
+            if (packageState.options.rootPath
+                && packageState.options.rootPath.length > bestMatchLength
+                && path.indexOf(packageState.options.rootPath) === 0) {
+                bestMatchLength = packageState.options.rootPath.length;
+                bestMatch = packageState;
             }
         }
 
         return bestMatch;
     }
 
-    private get(moduleName: string): ModuleState {
-        let m = this.registeredModules[moduleName];
+    private get(packageName: string): PackageState {
+        let m = this.registeredPackages[packageName];
 
         if (!m) {
-            throw new Error(`The module ${moduleName} is not registered.`);
+            throw new Error(`The package ${packageName} is not registered.`);
         }
 
         return m;
     }
 
-    private onModuleLoaded(registeredModule: ModuleState, module: DynamicModule): DynamicModule {
-        registeredModule.module = module;
-        registeredModule.loadingPromise = null;
-        registeredModule.state = State.LOADED;
-        return module;
+    private onPackageLoaded(registeredPackages: PackageState, pack: Package): Package {
+        registeredPackages.package = pack;
+        registeredPackages.loadingPromise = null;
+        registeredPackages.state = State.LOADED;
+        return pack;
     }
 
-    private onModuleError(moduleState: ModuleState, err): any {
-        moduleState.loadingPromise = null;
-        moduleState.state = State.REGISTERED;
-        this.audit().auditError('0', `Error while loading module ${moduleState.options.moduleName}.`, err);
+    private onPackageError(packageState: PackageState, err): any {
+        packageState.loadingPromise = null;
+        packageState.state = State.REGISTERED;
+        this.audit().auditError('0', `Error while loading package ${packageState.options.packageName}.`, err);
         return err;
     }
 
-    private doMount(moduleState: ModuleState): Promise<DynamicModule> {
-        if (!moduleState.module || moduleState.state != State.LOADED) {
-            throw new Error(`The module ${moduleState.options.moduleName} is not loaded.`);
+    private doMount(packageState: PackageState): Promise<Package> {
+        if (!packageState.package || packageState.state != State.LOADED) {
+            throw new Error(`The package ${packageState.options.packageName} is not loaded.`);
         }
 
-        if (moduleState.options.rootPath) {
-            this.currentPathModule = moduleState;
+        if (packageState.options.rootPath) {
+            this.currentPackage = packageState;
         }
 
-        moduleState.state = State.MOUNTING;
-        moduleState.mountingPromise = moduleState.module.mount(this, moduleState.options).then(
+        packageState.state = State.MOUNTING;
+        packageState.mountingPromise = packageState.package.mount(this, packageState.options).then(
             () => {
-                moduleState.state = State.MOUNTED;
-                moduleState.mountingPromise = null;
-                return moduleState.module;
+                packageState.state = State.MOUNTED;
+                packageState.mountingPromise = null;
+                return packageState.package;
             },
             (err) => {
-                moduleState.state = State.LOADED;
-                moduleState.mountingPromise = null;
-                this.audit().auditError('0', `Error while mounting module ${moduleState.options.moduleName}.`, err);
+                packageState.state = State.LOADED;
+                packageState.mountingPromise = null;
+                this.audit().auditError('0', `Error while mounting package ${packageState.options.packageName}.`, err);
                 throw err;
             });
 
-        return moduleState.mountingPromise;
+        return packageState.mountingPromise;
     }
 }
 

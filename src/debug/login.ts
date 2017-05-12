@@ -1,10 +1,10 @@
-import {Shell, DynamicModule, DynamicModuleOptions} from '../app/shell-ui';
+import {Shell, Package, PackageOptions} from '../app/shell-ui';
 
-export class LoginModule implements DynamicModule {
+export class LoginPackage implements Package {
     shell: Shell;
     element: HTMLElement;
 
-    mount(shell: Shell, options: DynamicModuleOptions): Promise<void> {
+    mount(shell: Shell, options: PackageOptions): Promise<void> {
         this.shell = shell;
         let el = options.rootElement;
 
