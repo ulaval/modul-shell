@@ -2,9 +2,9 @@
 export const createShell = function(
     identityServiceFactory: (shell: Shell) => IdentityService,
     auditServiceFactory: (shell: Shell) => AuditService,
-    gaServiceFactory: (shell: Shell) => GaService): Shell {
+    analyticsServiceFactory: (shell: Shell) => AnalyticsService): Shell {
 
-    return new ShellImpl(identityServiceFactory, auditServiceFactory, gaServiceFactory);
+    return new ShellImpl(identityServiceFactory, auditServiceFactory, analyticsServiceFactory);
 };
 
 /**
@@ -36,49 +36,35 @@ export interface Shell {
      */
     unmountModule(moduleName: string): Promise<DynamicModule>;
 
+    /**
+     * Initiates the shell and loads the fist module according to the current URL.
+     */
     start();
 
     /**
-     * Allows access to the current user.
-     */
-    identity(): Promise<Identity>;
-
-    identityService(): IdentityService;
-
-    /**
-     * Allows a module to give control to another module.
+     * Allows to navigate between modules.
      */
     navigateTo(pathName: string);
 
     /**
      * Emits an event for other modules to consume.
      */
-    emit(event: AppEvent);
+    emit(eventType: string, params?: any);
 
     /**
-     * Audits a javascript error.
+     * Gives access to the identity service.
      */
-    auditError(msg: string, err: any);
+    identity(): IdentityService;
 
     /**
-     * Audits a web navigation.
+     * Gives access to the audit service.
      */
-    auditNavigation(srcUrl: string, destUrl: string);
+    audit(): AuditService;
 
     /**
-     * Audits an error while invoking a rest service.
+     * Gives access to the analytics service.
      */
-    auditRestError(url: string, method: string, params: any, statusCode: number, errorId?: string, data?: any);
-
-    /**
-     * Audit a generic event.
-     */
-    auditEvent(event: AppEvent);
-
-    /**
-     * Gives access to the google analytics instance.
-     */
-    ga(): Promise<UniversalAnalytics.ga>;
+    analytics(): AnalyticsService;
 }
 
 export interface IdentityService {
@@ -89,10 +75,28 @@ export interface IdentityService {
 }
 
 export interface AuditService {
-    audit(event: AppEvent): void;
+    /**
+     * Audits a javascript error.
+     */
+    auditError(errorId: string, msg: string, err: any);
+
+    /**
+     * Audits a web navigation.
+     */
+    auditNavigation(srcUrl: string, destUrl: string);
+
+    /**
+     * Audits an error while invoking a rest service.
+     */
+    auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any);
+
+    /**
+     * Audit a generic event.
+     */
+    audit(eventId: string, eventType: string, params?: any);
 }
 
-export interface GaService {
+export interface AnalyticsService {
     ga(): Promise<UniversalAnalytics.ga>;
 }
 
@@ -116,27 +120,7 @@ export interface DynamicModule {
     /**
      * Receives events emitted through the Shell.emit() method.
      */
-    onEvent(event: AppEvent);
-}
-
-/**
- * Applicative event.
- */
-export interface AppEvent {
-    eventId: string;
-    eventType: string;
-    msg?: string;
-    timestamp?: number;
-    userName?: string;
-    url?: string;
-    srcUrl?: string;
-    destUrl?: string;
-    err?: Error;
-    method?: string;
-    params?: any;
-    statusCode?: number;
-    data?: any;
-    [key: string]: any;
+    onEvent(eventType: string, params?: any);
 }
 
 export interface Identity {
@@ -420,20 +404,20 @@ class ModuleState {
 }
 
 class ShellImpl implements Shell {
-    private readonly _identityService: IdentityService;
-    private readonly _auditService: AuditService;
-    private readonly _gaService: GaService;
+    private readonly identityService: IdentityService;
+    private readonly auditService: AuditService;
+    private readonly analyticsService: AnalyticsService;
     private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
     private currentPathModule: ModuleState;
 
     public constructor(
         identityServiceFactory: (shell: Shell) => IdentityService,
         auditServiceFactory: (shell: Shell) => AuditService,
-        gaServiceFactory: (shell: Shell) => GaService
+        analyticsServiceFactory: (shell: Shell) => AnalyticsService
     ) {
-        this._identityService = identityServiceFactory(this);
-        this._auditService = auditServiceFactory(this);
-        this._gaService = gaServiceFactory(this);
+        this.identityService = identityServiceFactory(this);
+        this.auditService = auditServiceFactory(this);
+        this.analyticsService = analyticsServiceFactory(this);
     }
 
     registerModule(moduleOptions: DynamicModuleOptions) {
@@ -529,7 +513,7 @@ class ShellImpl implements Shell {
             (err) => {
                 moduleState.state = State.LOADED;
                 moduleState.unmountingPromise = null;
-                this.auditError(`Error while unmounting module ${moduleState.options.moduleName}.`, err);
+                this.audit().auditError('0', `Error while unmounting module ${moduleState.options.moduleName}.`, err);
                 return err;
             }
         );
@@ -542,7 +526,7 @@ class ShellImpl implements Shell {
         this.showCurrentModule();
     }
 
-    emit(event: AppEvent) {
+    emit(eventType: string, params?: any) {
         if (!event) {
             return;
         }
@@ -551,7 +535,7 @@ class ShellImpl implements Shell {
             let moduleState = this.registeredModules[moduleName];
 
             if (moduleState.state == State.MOUNTED && moduleState.module) {
-                moduleState.module.onEvent(event);
+                moduleState.module.onEvent(eventType, params);
             }
         }
     }
@@ -564,79 +548,16 @@ class ShellImpl implements Shell {
         this.showCurrentModule();
     }
 
-    identity(): Promise<Identity> {
-        return this._identityService.identity();
+    identity(): IdentityService {
+        return this.identityService;
     }
 
-    identityService(): IdentityService {
-        return this._identityService;
+    audit(): AuditService {
+        return this.auditService;
     }
 
-    auditError(msg: string, err: any): AppEvent {
-        let event = {
-            eventId: generateId(),
-            eventType: 'js',
-            url: window.location.href,
-            msg,
-            err
-        };
-
-        this.auditEvent(event);
-
-        return event;
-    }
-
-    auditNavigation(srcUrl: string, destUrl: string): AppEvent {
-        let event = {
-            eventId: generateId(),
-            eventType: 'nav',
-            srcUrl,
-            destUrl
-        };
-
-        this.auditEvent(event);
-
-        return event;
-    }
-
-    auditRestError(url: string, method: string, params: any, statusCode: number, errorId?: string, data?: any): AppEvent {
-        let event = {
-            eventId: errorId || generateId(),
-            eventType: 'rest',
-            method,
-            params,
-            statusCode,
-            data
-        };
-
-        this.auditEvent(event);
-
-        return event;
-    }
-
-    auditEvent(event: AppEvent) {
-        if (!event || !event.eventType) {
-            console.warn('The event is incomplete and will be ignored.');
-            console.warn(event);
-        }
-
-        if (!event.eventId) {
-            event.eventId = generateId();
-        }
-
-        event.timestamp = new Date().getTime();
-
-        this.identity().then(identity => {
-            if (identity && identity.currentUserName) {
-                event.userName = identity.currentUserName;
-            }
-
-            this._auditService.audit(event);
-        });
-    }
-
-    ga(): Promise<UniversalAnalytics.ga> {
-        return this._gaService.ga();
+    analytics(): AnalyticsService {
+        return this.analyticsService;
     }
 
     private showCurrentModule() {
@@ -701,7 +622,7 @@ class ShellImpl implements Shell {
     private onModuleError(moduleState: ModuleState, err): any {
         moduleState.loadingPromise = null;
         moduleState.state = State.REGISTERED;
-        this.auditError(`Error while loading module ${moduleState.options.moduleName}.`, err);
+        this.audit().auditError('0', `Error while loading module ${moduleState.options.moduleName}.`, err);
         return err;
     }
 
@@ -724,7 +645,7 @@ class ShellImpl implements Shell {
             (err) => {
                 moduleState.state = State.LOADED;
                 moduleState.mountingPromise = null;
-                this.auditError(`Error while mounting module ${moduleState.options.moduleName}.`, err);
+                this.audit().auditError('0', `Error while mounting module ${moduleState.options.moduleName}.`, err);
                 throw err;
             });
 
@@ -747,10 +668,5 @@ function loadScript(url, timeout): Promise<HTMLScriptElement> {
         } catch (e) {
             reject(e);
         }
-        // window.setTimeout(() => reject(new Error(`Timeout while loading ${url}.`)), timeout);
     });
-}
-
-function generateId() {
-    return Math.random().toString(36).substring(2, 15);
 }

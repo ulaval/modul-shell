@@ -1,14 +1,14 @@
-import { Shell, GaService, Identity, IdentityService, AppEvent } from '../app/shell-ui';
+import { Shell, AnalyticsService, Identity, IdentityService } from '../app/shell-ui';
 
-export const auditToConsole = function(event: AppEvent) {
-    console.warn(event);
+export const auditToConsole = function(eventType: string, params?: any) {
+    console.warn(`${eventType}: ${JSON.stringify(params || 'no args')}`);
 };
 
 export function createLocalStorageIdentityService(loginUrl: string = '/login', logoutUrl: string = '/logout', key: string = 'identity'): (shell: Shell) => IdentityService {
     return (shell) => new LocalStorageIdentityService(shell, key, loginUrl, logoutUrl);
 }
 
-export function createDummyGaService(): (shell) => GaService {
+export function createDummyGaService(): (shell) => AnalyticsService {
     return (shell) => new DummyGaService();
 }
 
@@ -18,7 +18,7 @@ export default {
     createDummyGaService
 };
 
-class DummyGaService implements GaService {
+class DummyGaService implements AnalyticsService {
     ga(): Promise<UniversalAnalytics.ga> {
         return Promise.reject(new Error('Not implemented'));
     }

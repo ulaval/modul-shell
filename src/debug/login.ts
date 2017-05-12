@@ -1,4 +1,4 @@
-import {Shell, AppEvent, DynamicModule, DynamicModuleOptions} from '../app/shell-ui';
+import {Shell, DynamicModule, DynamicModuleOptions} from '../app/shell-ui';
 
 export class LoginModule implements DynamicModule {
     shell: Shell;
@@ -39,7 +39,7 @@ export class LoginModule implements DynamicModule {
         return Promise.resolve(undefined);
     }
 
-    onEvent(event: AppEvent) {
+    onEvent(eventType, params) {
         // Nothing to do
     }
 
@@ -57,7 +57,7 @@ export class LoginModule implements DynamicModule {
             return;
         }
 
-        this.shell.identityService().updateIdentity({
+        this.shell.identity().updateIdentity({
             authenticated: true,
             currentUserName: userName['value'],
             user: {
