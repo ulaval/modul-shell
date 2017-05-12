@@ -1,10 +1,10 @@
-import {AuditProvider, AppEvent} from '../app/shell-ui';
+import {AuditService, AppEvent} from '../app/shell-ui';
 
-export function createMpoAuditProvider(urlMpoAudit: string): AuditProvider {
-    return new MpoAuditProvider(urlMpoAudit);
+export function createMpoAuditService(urlMpoAudit: string): (shell) => AuditService {
+    return (shell) => new MpoAuditService(urlMpoAudit);
 }
 
-class MpoAuditProvider implements AuditProvider {
+class MpoAuditService implements AuditService {
     constructor(private urlMpoAudit) {
 
     }

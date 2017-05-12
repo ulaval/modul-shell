@@ -2,6 +2,6 @@ import * as Audit from './audit';
 import * as Identity from './identity';
 
 export default {
-    createMpoAuditProvider: Audit.createMpoAuditProvider,
+    createMpoAuditService: Audit.createMpoAuditService,
     authenticateWithMpoPortail: Identity.authenticateWithMpoPortail
 };

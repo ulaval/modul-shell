@@ -4,10 +4,6 @@ export class LoginModule implements DynamicModule {
     shell: Shell;
     element: HTMLElement;
 
-    constructor(private nextModule) {
-
-    }
-
     mount(shell: Shell, options: DynamicModuleOptions): Promise<void> {
         this.shell = shell;
         let el = options.rootElement;
@@ -61,6 +57,33 @@ export class LoginModule implements DynamicModule {
             return;
         }
 
-        this.shell.navigateTo(this.nextModule);
+        this.shell.identityService().updateIdentity({
+            authenticated: true,
+            currentUserName: userName['value'],
+            user: {
+                active: true,
+                suspended: false,
+                system: false,
+                currentAccount: {
+                    accountType: 'email',
+                    userName: userName['value']
+                },
+                userPreferences: {
+                    lang: 'fr'
+                },
+                userIdsBySystem: {},
+                accounts: [{
+                    accountType: 'email',
+                    userName: userName['value']
+                }],
+                primaryEmailAdress: userName['value'],
+                accesses: [],
+                changeNumber: 0
+            }
+        });
+
+        let res = /ret=([^&]+)/.exec(window.location.search);
+        let url = res ? decodeURIComponent(res[1]) : '/';
+        this.shell.navigateTo(url);
     }
 }

@@ -1,10 +1,10 @@
 
 export const createShell = function(
-    identityProvider: IdentityProvider,
-    auditProvider: AuditProvider,
-    gaProvider: GaProvider): Shell {
+    identityServiceFactory: (shell: Shell) => IdentityService,
+    auditServiceFactory: (shell: Shell) => AuditService,
+    gaServiceFactory: (shell: Shell) => GaService): Shell {
 
-    return new ShellImpl(identityProvider, auditProvider, gaProvider);
+    return new ShellImpl(identityServiceFactory, auditServiceFactory, gaServiceFactory);
 };
 
 /**
@@ -36,15 +36,14 @@ export interface Shell {
      */
     unmountModule(moduleName: string): Promise<DynamicModule>;
 
+    start();
+
     /**
      * Allows access to the current user.
      */
     identity(): Promise<Identity>;
 
-    /**
-     * To force a logout.
-     */
-    logout();
+    identityService(): IdentityService;
 
     /**
      * Allows a module to give control to another module.
@@ -82,16 +81,18 @@ export interface Shell {
     ga(): Promise<UniversalAnalytics.ga>;
 }
 
-export interface IdentityProvider {
+export interface IdentityService {
+    updateIdentity(identity: Identity): void;
     identity(): Promise<Identity>;
+    requireAuthenticatedIdentity(): Promise<Identity>;
     logout(): void;
 }
 
-export interface AuditProvider {
+export interface AuditService {
     audit(event: AppEvent): void;
 }
 
-export interface GaProvider {
+export interface GaService {
     ga(): Promise<UniversalAnalytics.ga>;
 }
 
@@ -419,16 +420,20 @@ class ModuleState {
 }
 
 class ShellImpl implements Shell {
-
+    private readonly _identityService: IdentityService;
+    private readonly _auditService: AuditService;
+    private readonly _gaService: GaService;
     private readonly registeredModules: { [moduleName: string]: ModuleState } = {};
     private currentPathModule: ModuleState;
 
     public constructor(
-        public identityProvider: IdentityProvider,
-        public auditProvider: AuditProvider,
-        public gaProvider: GaProvider
+        identityServiceFactory: (shell: Shell) => IdentityService,
+        auditServiceFactory: (shell: Shell) => AuditService,
+        gaServiceFactory: (shell: Shell) => GaService
     ) {
-
+        this._identityService = identityServiceFactory(this);
+        this._auditService = auditServiceFactory(this);
+        this._gaService = gaServiceFactory(this);
     }
 
     registerModule(moduleOptions: DynamicModuleOptions) {
@@ -511,7 +516,7 @@ class ShellImpl implements Shell {
         }
 
         if (moduleState.state != State.MOUNTED || !moduleState.module) {
-            throw new Error(`The module ${moduleName} is not mounted: ${moduleState.state}.`);
+            return Promise.reject(new Error(`The module ${moduleName} is not mounted: ${moduleState.state}.`));
         }
 
         moduleState.state = State.UNMOUNTING;
@@ -532,25 +537,9 @@ class ShellImpl implements Shell {
         return moduleState.unmountingPromise;
     }
 
-    navigateTo(pathName: string) {
-        let mount = () => {
-            history.pushState(undefined, '', pathName);
-
-            for (let moduleName in this.registeredModules) {
-                let moduleState = this.registeredModules[moduleName];
-
-                if (moduleState.options.rootPath && moduleState.options.rootPath.indexOf(pathName) === 0) {
-                    this.mountModule(moduleName);
-                    return;
-                }
-            }
-        };
-
-        if (this.currentPathModule) {
-            this.unmountModule(this.currentPathModule.options.moduleName).then(mount);
-        } else {
-            mount();
-        }
+    navigateTo(path: string) {
+        history.pushState(path, path, path);
+        this.showCurrentModule();
     }
 
     emit(event: AppEvent) {
@@ -567,12 +556,20 @@ class ShellImpl implements Shell {
         }
     }
 
-    identity(): Promise<Identity> {
-        return this.identityProvider.identity();
+    start() {
+        window.addEventListener('popstate', (ev) => {
+            // Required to prevent the browser from overriding the url
+            window.setTimeout(() => this.showCurrentModule(), 1);
+        });
+        this.showCurrentModule();
     }
 
-    logout(): void {
-        this.identityProvider.logout();
+    identity(): Promise<Identity> {
+        return this._identityService.identity();
+    }
+
+    identityService(): IdentityService {
+        return this._identityService;
     }
 
     auditError(msg: string, err: any): AppEvent {
@@ -634,12 +631,54 @@ class ShellImpl implements Shell {
                 event.userName = identity.currentUserName;
             }
 
-            this.auditProvider.audit(event);
+            this._auditService.audit(event);
         });
     }
 
     ga(): Promise<UniversalAnalytics.ga> {
-        return this.gaProvider.ga();
+        return this._gaService.ga();
+    }
+
+    private showCurrentModule() {
+        let path = window.location.pathname;
+
+        let moduleState = this.findModuleByPath(path);
+
+        if (moduleState == null) {
+            this.navigateTo('/');
+            return;
+        }
+
+        if (this.currentPathModule === moduleState) {
+            return;
+        }
+
+        if (this.currentPathModule) {
+            this.unmountModule(this.currentPathModule.options.moduleName)
+                .then(
+                    () => this.mountModule((moduleState as ModuleState).options.moduleName),
+                    () => this.mountModule((moduleState as ModuleState).options.moduleName));
+        } else {
+            this.mountModule(moduleState.options.moduleName);
+        }
+    }
+
+    private findModuleByPath(path: string): ModuleState | null {
+        let bestMatchLength = 0;
+        let bestMatch: ModuleState | null = null;
+
+        for (let moduleName in this.registeredModules) {
+            let moduleState = this.registeredModules[moduleName];
+
+            if (moduleState.options.rootPath
+                && moduleState.options.rootPath.length > bestMatchLength
+                && path.indexOf(moduleState.options.rootPath) === 0) {
+                bestMatchLength = moduleState.options.rootPath.length;
+                bestMatch = moduleState;
+            }
+        }
+
+        return bestMatch;
     }
 
     private get(moduleName: string): ModuleState {

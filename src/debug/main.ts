@@ -3,26 +3,26 @@ import {LoginModule} from './login';
 import dev from './dev';
 import mpo from '../mpo';
 
-const identityProvider = dev.createLocalStorageIdentityProvider();
-const auditMethod = mpo.createMpoAuditProvider('https://audit.monportail.test.ulaval.ca/audit/v1');
-const gaProvider = dev.createDummyGaProvider();
+const identityService = dev.createLocalStorageIdentityService('/login', '/login');
+const auditService = mpo.createMpoAuditService('https://audit.monportail.test.ulaval.ca/audit/v1');
+const gaService = dev.createDummyGaService();
 
-const shell = createShell(identityProvider, auditMethod, gaProvider);
+const shell = createShell(identityService, auditService, gaService);
 
 shell.registerModules([{
     moduleName: 'login',
     rootElement: 'log',
-    load: () => Promise.resolve(new LoginModule('/admission')),
+    load: () => Promise.resolve(new LoginModule()),
     rootPath: '/login'
 },
 {
     moduleName: 'mpoAdmission',
     rootElement: 'adm',
     load: 'http://localhost:8095/app.js',
-    rootPath: '/admission'
+    rootPath: '/'
 }]);
 
-shell.navigateTo('/login');
+shell.start();
 
 // shell.auditError('A bad thing happened.', new Error('Oh la la'));
 

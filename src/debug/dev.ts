@@ -1,43 +1,64 @@
-import { GaProvider, Identity, IdentityProvider, AppEvent } from '../app/shell-ui';
+import { Shell, GaService, Identity, IdentityService, AppEvent } from '../app/shell-ui';
 
 export const auditToConsole = function(event: AppEvent) {
     console.warn(event);
 };
 
-export function createLocalStorageIdentityProvider(key: string = 'identity'): IdentityProvider {
-    return new LocalStorageIdentityProvider(key);
+export function createLocalStorageIdentityService(loginUrl: string = '/login', logoutUrl: string = '/logout', key: string = 'identity'): (shell: Shell) => IdentityService {
+    return (shell) => new LocalStorageIdentityService(shell, key, loginUrl, logoutUrl);
 }
 
-export function createDummyGaProvider(): GaProvider {
-    return new DummyGaProvider();
+export function createDummyGaService(): (shell) => GaService {
+    return (shell) => new DummyGaService();
 }
 
 export default {
     auditToConsole,
-    createLocalStorageIdentityProvider,
-    createDummyGaProvider
+    createLocalStorageIdentityService,
+    createDummyGaService
 };
 
-class DummyGaProvider implements GaProvider {
+class DummyGaService implements GaService {
     ga(): Promise<UniversalAnalytics.ga> {
         return Promise.reject(new Error('Not implemented'));
     }
 }
 
-class LocalStorageIdentityProvider implements IdentityProvider {
-    cur: Promise<Identity>;
+class LocalStorageIdentityService implements IdentityService {
+    currentIdentity: Identity;
 
-    constructor(private key) {
-        this.cur = Promise.resolve(this.load());
+    constructor(private shell: Shell, private key, private loginUrl: string, private logoutUrl: string) {
+        this.currentIdentity = this.load();
+    }
+
+    updateIdentity(identity: Identity): void {
+        localStorage.setItem(this.key, JSON.stringify(identity));
+        this.currentIdentity = identity;
     }
 
     identity(): Promise<Identity> {
-        return this.cur;
+        return Promise.resolve(this.currentIdentity);
+    }
+
+    requireAuthenticatedIdentity(): Promise<Identity> {
+        return this.identity()
+            .then(identity => {
+                if (identity.authenticated) {
+                    return identity;
+                }
+                this.shell.navigateTo(`${this.loginUrl}?ret=${encodeURIComponent(window.location.pathname)}`);
+                throw new Error ('Not authenticated.');
+            },
+            err => {
+                this.shell.navigateTo(this.loginUrl);
+                throw err;
+            });
     }
 
     logout(): void {
         localStorage.removeItem(this.key);
-        this.cur = Promise.resolve(this.load());
+        this.currentIdentity = this.load();
+        this.shell.navigateTo(this.logoutUrl);
     }
 
     private load(): Identity {
