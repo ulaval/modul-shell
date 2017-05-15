@@ -1,6 +1,4 @@
-const CompressionPlugin = require("compression-webpack-plugin")
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
 const UglifyjsWebpackPlugin = require('uglifyjs-webpack-plugin');
 const path = require("path");
 const createVariants = require('parallel-webpack').createVariants;
@@ -12,6 +10,7 @@ function resolve(dir) {
 function createConfig(options) {
     const conf = {
         entry: {
+            // To support multiple different entries generating different outputs
             app: ['./src/' + options.entry + '.ts']
         },
 
@@ -19,7 +18,6 @@ function createConfig(options) {
             path: resolve('dist'),
             library: '@ulaval/shell-ui' + (options.entry == 'shell' ? '' : '/' + options.entry),
             libraryTarget: 'umd',
-            //publicPath: "/",
             filename: options.entry + (options.prod ? '.min' : '') + '.js',
             umdNamedDefine: true
         },
@@ -38,6 +36,7 @@ function createConfig(options) {
                     loader: 'tslint-loader',
                     include: [resolve('src'), resolve('tests')],
                     options: {
+                        configFile: 'conf/tslint.json',
                         formatter: 'grouped',
                         formattersDirectory: 'node_modules/custom-tslint-formatters/formatters'
                     }
@@ -52,25 +51,24 @@ function createConfig(options) {
             ]
         },
         plugins: [
-            new HtmlWebpackPlugin({
-                filename: 'index.html',
-                template: resolve('src/debug/index.html'),
-                inject: 'body'/*,
-                inlineSource: 'app-min.js'*/
-            }),
-            //new HtmlWebpackInlineSourcePlugin()
-            new CompressionPlugin()
+
         ]
     }
 
+    // If production, we compress the output
     if (options.prod) {
         conf.plugins.push(new UglifyjsWebpackPlugin({
             comments: false
-        }))
+        }));
     }
 
-    if (options.entry == 'mpo') {
-        conf.externals = {};
+    // If debug, we add the file index.html to startup the app
+    if (options.entry == 'debug/main') {
+        conf.plugins.push(new HtmlWebpackPlugin({
+            filename: 'index.html',
+            template: resolve('src/debug/index.html'),
+            inject: 'body'
+        }));
     }
 
     return conf;
@@ -83,8 +81,10 @@ const variants = {
 
 module.exports = function (env) {
     if (env && env.build) {
+        // If we are building, we handle multiple configurations in parallel
         return createVariants({}, variants, createConfig);
     } else {
-        return createConfig({prod: false, entry: 'debug/main'});
+        // If we are developing, the single entry point is the debug file
+        return createConfig({ prod: false, entry: 'debug/main' });
     }
 }
