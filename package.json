@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "description": "Javascript lib to help bootstrap a multi-modules application.",
     "author": "Frédéric Poliquin <frederic.poliquin@dti.ulaval.ca>",
+    "private": false,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ulaval/shell-ui.git"
+    },
     "scripts": {
         "build": "rimraf dist/**/* && webpack --config conf/webpack.config.js --color --env.build && npm run declarations",
         "clean": "rimraf dist",
