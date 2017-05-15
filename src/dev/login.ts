@@ -1,4 +1,4 @@
-import {Shell, Package, PackageOptions} from '../app/shell-ui';
+import {Shell, Package, PackageOptions} from '../shell';
 
 export class LoginPackage implements Package {
     shell: Shell;

@@ -1,4 +1,4 @@
-import {Shell, AuditService} from '../app/shell-ui';
+import {Shell, AuditService} from '../shell';
 
 export function createMpoAuditService(urlMpoAudit: string): (shell) => AuditService {
     return (shell) => new MpoAuditService(shell, urlMpoAudit);

@@ -1,4 +1,4 @@
-import {Identity} from '../app/shell-ui';
+import {Identity} from '../shell';
 
 export function authenticateWithMpoPortail(url: string, login: string, pwd: string): Promise<Identity> {
     return new Promise((resolve, reject) => {

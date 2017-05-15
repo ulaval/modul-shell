@@ -1,4 +1,4 @@
-import { Shell, AnalyticsService, Identity, IdentityService } from '../app/shell-ui';
+import { Shell, AnalyticsService, Identity, IdentityService } from '../shell';
 
 export const auditToConsole = function(eventType: string, params?: any) {
     console.warn(`${eventType}: ${JSON.stringify(params || 'no args')}`);
