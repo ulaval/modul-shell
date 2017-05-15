@@ -6,9 +6,9 @@
     "scripts": {
         "build": "rimraf dist/**/* && webpack --config conf/webpack.config.js --color --env.build && npm run declarations",
         "clean": "rimraf dist",
-        "declarations": "dts-generator --name @ulaval/shell-ui --project src --out dist/typings.d.ts --main @ulaval/shell-ui/shell",
+        "declarations": "node conf/declarations.js",
         "dev": "webpack-dev-server --config conf/webpack.config.js --content-base src --colors --port 5000 --open --history-api-fallback",
-        "prepare": "npm run prepare",
+        "prepare": "npm run build",
         "prod": "http-server dist -p 5000 -g -o",
         "unit": "",
         "e2e": "",
@@ -16,6 +16,7 @@
         "test": "npm run unit && npm run e2e",
         "tslint": "tslint -c conf/tslint.json -e 'src/**/*.d.ts' -e 'tests/unit/**/*.d.ts' -s node_modules/custom-tslint-formatters/formatters -t grouped 'src/**/*.ts' 'tests/unit/**/*.ts' 'tests/e2e/*.ts'"
     },
+    "main": "dist/shell.min.js",
     "typings": "dist/typings.d.ts",
     "dependencies": {},
     "devDependencies": {

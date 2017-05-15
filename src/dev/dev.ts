@@ -1,24 +1,36 @@
-import { Shell, AnalyticsService, Identity, IdentityService } from '../shell';
+import { Shell, AnalyticsService, Identity, IdentityService, AuditService } from '../shell';
 
-export const auditToConsole = function(eventType: string, params?: any) {
-    console.warn(`${eventType}: ${JSON.stringify(params || 'no args')}`);
+export const createConsoleAuditServiceFactory = function(): (shell) => AuditService {
+    return (shell) => new ConsoleAuditService();
 };
 
-export function createLocalStorageIdentityService(loginUrl: string = '/login', logoutUrl: string = '/logout', key: string = 'identity'): (shell: Shell) => IdentityService {
+export function createLocalStorageIdentityServiceFactory(loginUrl: string = '/login', logoutUrl: string = '/logout', key: string = 'identity'): (shell: Shell) => IdentityService {
     return (shell) => new LocalStorageIdentityService(shell, key, loginUrl, logoutUrl);
 }
 
-export function createDummyGaService(): (shell) => AnalyticsService {
-    return (shell) => new DummyGaService();
+export function createDummyAnalyticsServiceFactory(): (shell) => AnalyticsService {
+    return (shell) => new DummyAnalyticsService();
 }
 
-export default {
-    auditToConsole,
-    createLocalStorageIdentityService,
-    createDummyGaService
-};
+class ConsoleAuditService implements AuditService {
+    auditError(errorId: string, msg: string, err: any) {
+        this.audit(errorId, 'err', {msg, err});
+    }
 
-class DummyGaService implements AnalyticsService {
+    auditNavigation(srcUrl: string, destUrl: string) {
+        this.audit('0', 'nav', {srcUrl, destUrl});
+    }
+
+    auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any) {
+        this.audit(errorId, 'rest', {url, method, params, statusCode, data});
+    }
+
+    audit(eventId: string, eventType: string, params?: any) {
+        console.info({eventId, eventType, params});
+    }
+}
+
+class DummyAnalyticsService implements AnalyticsService {
     ga(): Promise<UniversalAnalytics.ga> {
         return Promise.reject(new Error('Not implemented'));
     }

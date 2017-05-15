@@ -1,11 +1,11 @@
 import { createShell } from '../shell';
-import {LoginPackage, createDummyGaService, createLocalStorageIdentityService} from '../dev';
+import {LoginPackage, createDummyAnalyticsServiceFactory, createLocalStorageIdentityServiceFactory} from '../dev';
 import {createMpoAuditService} from '../mpo';
 // import identity from '../mpo/identity';
 
-const identityService = createLocalStorageIdentityService('/login', '/login');
+const identityService = createLocalStorageIdentityServiceFactory('/login', '/login');
 const auditService = createMpoAuditService('https://audit.monportail.test.ulaval.ca/audit/v1');
-const gaService = createDummyGaService();
+const gaService = createDummyAnalyticsServiceFactory();
 
 const shell = createShell(identityService, auditService, gaService);
 
