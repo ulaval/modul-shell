@@ -1,4 +1,11 @@
 
+/**
+ * Creates a shell to handle a multi-package application.
+ *
+ * @param identityServiceFactory The factory to create an identity service
+ * @param auditServiceFactory The factory to create an audit service
+ * @param analyticsServiceFactory  The factory to create an analytics service
+ */
 export const createShell = function(
     identityServiceFactory: (shell: Shell) => IdentityService,
     auditServiceFactory: (shell: Shell) => AuditService,
@@ -566,7 +573,12 @@ class ShellImpl implements Shell {
         let packageState = this.findPackageByPath(path);
 
         if (packageState == null) {
-            this.navigateTo('/');
+            console.warn(`No package matches "${path}"`);
+
+            if (this.currentPackage) {
+                this.unmountPackage(this.currentPackage.options.packageName);
+            }
+
             return;
         }
 

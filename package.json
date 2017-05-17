@@ -44,10 +44,6 @@
         "tslint-config-standard": "^5.0.2",
         "tslint-loader": "^3.5.3"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/ulaval/shell-ui.git"
-    },
     "engines": {
         "node": ">= 6.0.0",
         "npm": ">= 3.0.0"

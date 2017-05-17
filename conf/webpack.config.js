@@ -19,7 +19,8 @@ function createConfig(options) {
             library: '@ulaval/shell-ui' + (options.entry == 'shell' ? '' : '/' + options.entry),
             libraryTarget: 'umd',
             filename: options.entry + (options.prod ? '.min' : '') + '.js',
-            umdNamedDefine: true
+            umdNamedDefine: true,
+            publicPath: '/'
         },
 
         resolve: {
