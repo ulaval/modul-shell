@@ -137,9 +137,9 @@ export interface Identity {
     authenticated: boolean;
 
     /**
-     * The user name used to open the session or 'anonymous' if not authenticated.
+     * The user's account used to open the current session.
      */
-    currentUserName: 'anonymous' | string;
+    currentAccount: Account;
 
     /**
      * The user if authenticated.
@@ -150,6 +150,11 @@ export interface Identity {
      * Token to use for invoking secured services.
      */
     token?: Token;
+
+    /**
+     * Extra proprietary attributes.
+     */
+    attributes: any;
 }
 
 export interface User {
@@ -158,11 +163,6 @@ export interface User {
      * If the current user is a system.
      */
     system: boolean;
-
-    /**
-     * The user's account used to open the current session.
-     */
-    currentAccount: Account;
 
     /**
      * User ids by system.
@@ -277,13 +277,14 @@ export interface UserPreferences {
 export interface Account {
     /**
      * The account type.
+     * If the user is not authenticated, the account type is 'anonymous'.
      */
-    accountType: 'email' | 'google' | 'facebook' | 'ul' | string;
+    accountType: 'anonymous' | 'email' | 'google' | 'facebook' | 'ul' | string;
 
     /**
      * The user name or email adress.
      */
-    userName: string;
+    userName: 'anonymous' | string;
 
     /**
      * The password expiration date.

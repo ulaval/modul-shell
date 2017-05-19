@@ -1,8 +1,12 @@
-import {Shell, Package, PackageOptions} from '../shell';
+import { Shell, Package, PackageOptions, Identity } from '../shell';
 
 export class LoginPackage implements Package {
     shell: Shell;
     element: HTMLElement;
+
+    constructor(private loginMethod?: (login: string, pwd: string) => Promise<Identity>) {
+
+    }
 
     mount(shell: Shell, options: PackageOptions): Promise<void> {
         this.shell = shell;
@@ -44,46 +48,52 @@ export class LoginPackage implements Package {
     }
 
     onLogin() {
-        let userName = document.getElementById('userName');
-        let pwd = document.getElementById('password');
+        let userName = document.getElementById('userName') || '';
+        let pwd = document.getElementById('password') || '';
 
-        if (!userName || userName['value'] != 'fred') {
-            alert('Bad username');
-            return;
-        }
+        const loginMethod = this.loginMethod ? this.loginMethod : defaultLoginMethod;
 
-        if (!pwd || pwd['value'] != 'fred') {
-            alert('Bad password');
-            return;
-        }
-
-        this.shell.identity().updateIdentity({
-            authenticated: true,
-            currentUserName: userName['value'],
-            user: {
-                active: true,
-                suspended: false,
-                system: false,
-                currentAccount: {
-                    accountType: 'email',
-                    userName: userName['value']
-                },
-                userPreferences: {
-                    lang: 'fr'
-                },
-                userIdsBySystem: {},
-                accounts: [{
-                    accountType: 'email',
-                    userName: userName['value']
-                }],
-                primaryEmailAdress: userName['value'],
-                accesses: [],
-                changeNumber: 0
-            }
-        });
-
-        let res = /ret=([^&]+)/.exec(window.location.search);
-        let url = res ? decodeURIComponent(res[1]) : '/';
-        this.shell.navigateTo(url);
+        loginMethod(userName['value'], pwd['value'])
+            .then((identity) => {
+                this.shell.identity().updateIdentity(identity);
+                let res = /ret=([^&]+)/.exec(window.location.search);
+                let url = res ? decodeURIComponent(res[1]) : '/';
+                this.shell.navigateTo(url);
+            });
     }
+}
+
+function defaultLoginMethod(userName, pwd): Promise<Identity> {
+    if (userName != 'fred') {
+        return Promise.reject('Bad user or password.');
+    }
+
+    if (pwd != 'fred') {
+        return Promise.reject('Bad user or password.');
+    }
+
+    return Promise.resolve({
+        authenticated: true,
+        currentAccount: {
+            accountType: 'dummy',
+            userName: userName
+        },
+        user: {
+            active: true,
+            suspended: false,
+            system: false,
+            userPreferences: {
+                lang: 'fr'
+            },
+            userIdsBySystem: {},
+            accounts: [{
+                accountType: 'dummy',
+                userName: userName
+            }],
+            primaryEmailAdress: userName + '@ulaval.ca',
+            accesses: [],
+            changeNumber: 0
+        },
+        attributes: {}
+    });
 }

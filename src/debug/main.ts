@@ -1,6 +1,6 @@
 import {createShell, Package} from '../shell';
 import {LoginPackage, createDummyAnalyticsServiceFactory, createLocalStorageIdentityServiceFactory} from '../dev';
-import {createMpoAuditService} from '../mpo';
+import {createMpoAuditService, authenticateWithMpoPortail} from '../mpo';
 // import identity from '../mpo/identity';
 
 const identityService = createLocalStorageIdentityServiceFactory('/login', '/login');
@@ -35,7 +35,7 @@ shell.registerPackages([{
 {
     packageName: 'login',
     rootElement: 'log',
-    load: () => Promise.resolve(new LoginPackage()),
+    load: () => Promise.resolve(new LoginPackage((userName, pwd) => authenticateWithMpoPortail('https://monportail.testpr.ulaval.ca', userName, pwd))),
     rootPath: '/login'
 },
 {

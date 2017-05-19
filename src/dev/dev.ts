@@ -81,7 +81,11 @@ class LocalStorageIdentityService implements IdentityService {
         } else {
             return {
                 authenticated: false,
-                currentUserName: 'anonymous'
+                currentAccount: {
+                    accountType: 'anonymous',
+                    userName: 'anonymous'
+                },
+                attributes: {}
             };
         }
     }

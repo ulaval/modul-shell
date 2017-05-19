@@ -49,9 +49,10 @@ class MpoAuditService implements AuditService {
                 ...params
             };
 
-            if (identity && identity.currentUserName) {
-                event.codeAcces = identity.currentUserName;
+            if (identity && identity.currentAccount) {
+                event.codeAcces = identity.currentAccount.userName;
             }
+
             const req = new XMLHttpRequest();
             req.open('POST', this.urlMpoAudit + '/journal', true);
             req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
