@@ -1,6 +1,6 @@
 {
     "name": "@ulaval/shell-ui",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Javascript lib to help bootstrap a multi-modules application.",
     "author": "Frédéric Poliquin <frederic.poliquin@dti.ulaval.ca>",
     "private": false,
