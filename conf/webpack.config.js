@@ -16,10 +16,10 @@ function createConfig(options) {
 
         output: {
             path: resolve('dist'),
-            library: '@ulaval/shell-ui' + (options.entry == 'shell' ? '' : '/' + options.entry),
-            libraryTarget: 'umd',
+            // library: '@ulaval/shell-ui' + (options.entry == 'shell' ? '' : '/' + options.entry),
+            // libraryTarget: 'umd',
             filename: options.entry + (options.prod ? '.min' : '') + '.js',
-            umdNamedDefine: true,
+            // umdNamedDefine: true,
             publicPath: '/'
         },
 

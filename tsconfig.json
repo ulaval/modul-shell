@@ -1,9 +1,7 @@
 {
     "compilerOptions": {
         "baseUrl": ".",
-        "paths": {
-            "*": ["src/*"]
-        },
+        "rootDir": "src",
         "target": "es5",
         "module": "es2015",
         "moduleResolution": "node",
@@ -21,5 +19,11 @@
         "typeRoots": [
             "node_modules/@types"
         ]
-    }
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "src/externals/**/*"
+    ]
 }

@@ -14,19 +14,19 @@ export function createDummyAnalyticsServiceFactory(): (shell) => AnalyticsServic
 
 class ConsoleAuditService implements AuditService {
     auditError(errorId: string, msg: string, err: any) {
-        this.audit(errorId, 'err', {msg, err});
+        this.audit(errorId, 'err', { msg, err });
     }
 
     auditNavigation(srcUrl: string, destUrl: string) {
-        this.audit('0', 'nav', {srcUrl, destUrl});
+        this.audit('0', 'nav', { srcUrl, destUrl });
     }
 
     auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any) {
-        this.audit(errorId, 'rest', {url, method, params, statusCode, data});
+        this.audit(errorId, 'rest', { url, method, params, statusCode, data });
     }
 
     audit(eventId: string, eventType: string, params?: any) {
-        console.info({eventId, eventType, params});
+        console.info({ eventId, eventType, params });
     }
 }
 
@@ -59,7 +59,7 @@ class LocalStorageIdentityService implements IdentityService {
                     return identity;
                 }
                 this.shell.navigateTo(`${this.loginUrl}?ret=${encodeURIComponent(window.location.pathname)}`);
-                throw new Error ('Not authenticated.');
+                throw new Error('Not authenticated.');
             },
             err => {
                 this.shell.navigateTo(this.loginUrl);

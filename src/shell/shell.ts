@@ -6,13 +6,12 @@
  * @param auditServiceFactory The factory to create an audit service
  * @param analyticsServiceFactory  The factory to create an analytics service
  */
-export const createShell = function(
+export const createShell = (
     identityServiceFactory: (shell: Shell) => IdentityService,
     auditServiceFactory: (shell: Shell) => AuditService,
-    analyticsServiceFactory: (shell: Shell) => AnalyticsService): Shell {
+    analyticsServiceFactory: (shell: Shell) => AnalyticsService) => new ShellImpl(identityServiceFactory, auditServiceFactory, analyticsServiceFactory) as Shell;
 
-    return new ShellImpl(identityServiceFactory, auditServiceFactory, analyticsServiceFactory);
-};
+// type InlineConstructor<T> = (...args: any[]) => T;
 
 /**
  * Interface to cummunicate with the shell.
@@ -46,12 +45,19 @@ export interface Shell {
     /**
      * Initiates the shell and loads the fist package according to the current URL.
      */
-    start();
+    start(cloak?: boolean);
+
+    uncloak(): void;
 
     /**
      * Allows to navigate between packages.
      */
     navigateTo(pathName: string);
+
+    /**
+     * assumed by security?
+     */
+    navigateToLogout();
 
     /**
      * Emits an event for other packages to consume.
@@ -72,6 +78,18 @@ export interface Shell {
      * Gives access to the analytics service.
      */
     analytics(): AnalyticsService;
+
+    loadScript(url, timeout): Promise<HTMLScriptElement>;
+
+    /**
+     * Dependency injection? Will work well-known packages, but not really for dynamically loaded ones.
+     */
+    getPackage(packageName: string): Package | undefined;
+
+    /**
+     * Injector? this is a test...
+     */
+    package(packageName: string, inlineConstructor: any[]);
 }
 
 export interface IdentityService {
@@ -384,6 +402,22 @@ export interface PackageOptions {
      * Optional parameters to pass to the package while mounting.
      */
     params?: { [key: string]: any };
+
+    /**
+     * TODO: package always mounted, no matter the current package mounted for the selected path
+     * TODO: or should be asked to be mounted by a another package, and remain mounted if already there...
+     */
+    forceLoad?: boolean;
+
+    /**
+     * For chunk loading, will set the __webpack_public_path__ var.
+     */
+    repoPublicPath?: string;
+
+    /**
+     * Packages loaded before the application starts
+     */
+    guard?: boolean;
 }
 
 enum State {
@@ -407,7 +441,7 @@ class PackageState {
     constructor(
         public options: PackageOptions
     ) {
-
+        // TODO: ensure element id (if defined) exists
     }
 }
 
@@ -460,7 +494,7 @@ class ShellImpl implements Shell {
                     throw err;
                 });
         } else {
-            packageState.loadingPromise = loadScript(packageState.options.load, 10000)
+            packageState.loadingPromise = this.loadScript(packageState.options.load, 10000)
                 .then(
                 mod => {
                     return this.onPackageLoaded(packageState, window[packageName]);
@@ -531,7 +565,7 @@ class ShellImpl implements Shell {
 
     navigateTo(path: string) {
         history.pushState(path, path, path);
-        this.showCurrentPackage();
+        this.showCurrentPackages();
     }
 
     emit(eventType: string, params?: any) {
@@ -548,12 +582,36 @@ class ShellImpl implements Shell {
         }
     }
 
-    start() {
-        window.addEventListener('popstate', (ev) => {
-            // Required to prevent the browser from overriding the url
-            window.setTimeout(() => this.showCurrentPackage(), 1);
-        });
-        this.showCurrentPackage();
+    start(cloak?: boolean) {
+        this.mountGuardPackage().then(() => {
+            if (cloak) {
+                let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
+                if (body.length > 0) {
+                    body[0].classList.add('shell-cloak');
+                }
+            }
+
+            window.addEventListener('popstate', (ev) => {
+                // Required to prevent the browser from overriding the url
+                window.setTimeout(() => this.showCurrentPackages(), 1);
+            });
+            this.showCurrentPackages();
+        }, () => this.navigateToAuthentification());
+    }
+
+    navigateToAuthentification(): void {
+        window.location.replace(`${window.location.origin}/auth/deleguer?urlretour=${encodeURIComponent(window.location.href)}`);
+    }
+
+    navigateToLogout(): void {
+        window.location.href = `${window.location.origin}/auth/deconnecter/?interne=1&urlNouvelleConnexion=${window.location.origin}`;
+    }
+
+    uncloak(): void {
+        let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
+        if (body.length > 0) {
+            body[0].classList.remove('shell-cloak');
+        }
     }
 
     identity(): IdentityService {
@@ -568,8 +626,61 @@ class ShellImpl implements Shell {
         return this.analyticsService;
     }
 
-    private showCurrentPackage() {
+    loadScript(url, timeout): Promise<HTMLScriptElement> {
+        return new Promise((resolve, reject) => {
+            try {
+                const head = document.getElementsByTagName('head')[0];
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.charset = 'utf-8';
+                script.async = true;
+                script.src = url;
+                script.onload = () => resolve(script);
+                script.onerror = (err) => reject(err);
+                head.appendChild(script);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    getPackage(packageName: string): Package | undefined {
+        return this.registeredPackages[packageName].package;
+    }
+
+    package(packageName: string, inlineConstructor: any[]) {
+        let c = inlineConstructor[inlineConstructor.length - 1];
+        let o: any = Object.create(c.prototype);
+        console.log('a', o, o.s);
+        o.showMe();
+        if (inlineConstructor.length == 1) {
+            c.apply(o, []);
+        } else {
+            c.apply(o, inlineConstructor.slice(0, inlineConstructor.length - 1));
+        }
+
+        console.log('b', o, o.s);
+        o.showMe();
+    }
+
+    private mountGuardPackage(): Promise<Package | undefined> {
+        let result: Promise<Package | undefined> | undefined = undefined;
+        for (let packageName in this.registeredPackages) {
+            let packageState = this.registeredPackages[packageName];
+            if (packageState.options.guard) {
+                result = this.mountPackage(packageState.options.packageName);
+            }
+        }
+        if (!result) {
+            result = Promise.resolve(undefined);
+        }
+        return result;
+    }
+
+    private showCurrentPackages() {
         let path = window.location.pathname;
+
+        this.findPermanentPackages().forEach(packageState => this.mountPackage(packageState.options.packageName));
 
         let packageState = this.findPackageByPath(path);
 
@@ -590,11 +701,22 @@ class ShellImpl implements Shell {
         if (this.currentPackage) {
             this.unmountPackage(this.currentPackage.options.packageName)
                 .then(
-                    () => this.mountPackage((packageState as PackageState).options.packageName),
-                    () => this.mountPackage((packageState as PackageState).options.packageName));
+                () => this.mountPackage((packageState as PackageState).options.packageName),
+                () => this.mountPackage((packageState as PackageState).options.packageName));
         } else {
             this.mountPackage(packageState.options.packageName);
         }
+    }
+
+    private findPermanentPackages(): PackageState[] {
+        let result: PackageState[] = [];
+        for (let packageName in this.registeredPackages) {
+            let packageState = this.registeredPackages[packageName];
+            if (packageState.options.forceLoad) {
+                result.push(packageState);
+            }
+        }
+        return result;
     }
 
     private findPackageByPath(path: string): PackageState | null {
@@ -616,13 +738,13 @@ class ShellImpl implements Shell {
     }
 
     private get(packageName: string): PackageState {
-        let m = this.registeredPackages[packageName];
+        let packageState = this.registeredPackages[packageName];
 
-        if (!m) {
+        if (!packageState) {
             throw new Error(`The package ${packageName} is not registered.`);
         }
 
-        return m;
+        return packageState;
     }
 
     private onPackageLoaded(registeredPackages: PackageState, pack: Package): Package {
@@ -649,11 +771,12 @@ class ShellImpl implements Shell {
         }
 
         packageState.state = State.MOUNTING;
+
         packageState.mountingPromise = packageState.package.mount(this, packageState.options).then(
             () => {
                 packageState.state = State.MOUNTED;
                 packageState.mountingPromise = null;
-                return packageState.package;
+                return packageState.package as Package; // not null
             },
             (err) => {
                 packageState.state = State.LOADED;
@@ -666,20 +789,20 @@ class ShellImpl implements Shell {
     }
 }
 
-function loadScript(url, timeout): Promise<HTMLScriptElement> {
-    return new Promise((resolve, reject) => {
-        try {
-            const head = document.getElementsByTagName('head')[0];
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.charset = 'utf-8';
-            script.async = true;
-            script.src = url;
-            script.onload = () => resolve(script);
-            script.onerror = (err) => reject(err);
-            head.appendChild(script);
-        } catch (e) {
-            reject(e);
-        }
-    });
-}
+// function loadScript(url, timeout): Promise<HTMLScriptElement> {
+//     return new Promise((resolve, reject) => {
+//         try {
+//             const head = document.getElementsByTagName('head')[0];
+//             const script = document.createElement('script');
+//             script.type = 'text/javascript';
+//             script.charset = 'utf-8';
+//             script.async = true;
+//             script.src = url;
+//             script.onload = () => resolve(script);
+//             script.onerror = (err) => reject(err);
+//             head.appendChild(script);
+//         } catch (e) {
+//             reject(e);
+//         }
+//     });
+// }
