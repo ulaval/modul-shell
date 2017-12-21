@@ -1,8 +1,9 @@
 node_modules
-src
 conf
+src
 tests
 .npmignore
 .vscode
 .htmlhintrc
 *.tgz
+tsconfig.json

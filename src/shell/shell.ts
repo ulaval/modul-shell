@@ -6,10 +6,15 @@
  * @param auditServiceFactory The factory to create an audit service
  * @param analyticsServiceFactory  The factory to create an analytics service
  */
-export const createShell = (
-    identityServiceFactory: (shell: Shell) => IdentityService,
-    auditServiceFactory: (shell: Shell) => AuditService,
-    analyticsServiceFactory: (shell: Shell) => AnalyticsService) => new ShellImpl(identityServiceFactory, auditServiceFactory, analyticsServiceFactory) as Shell;
+export const createShell = () => new ShellImpl() as Shell;
+
+type PackagesMap = {
+    [packageName: string]: PackageState
+};
+
+type ServicesMap = {
+    [serviceName: string]: any
+};
 
 // type InlineConstructor<T> = (...args: any[]) => T;
 
@@ -26,6 +31,8 @@ export interface Shell {
      * Register a series of new packages so that they can be loaded and mounted.
      */
     registerPackages(packagesOptions: [PackageOptions]);
+
+    registerService(serviceName: string, service: any);
 
     /**
      * Loads the package in advance so that it is ready to be mounted.
@@ -45,9 +52,9 @@ export interface Shell {
     /**
      * Initiates the shell and loads the fist package according to the current URL.
      */
-    start(cloak?: boolean);
+    start();
 
-    uncloak(): void;
+    // uncloak(): void;
 
     /**
      * Allows to navigate between packages.
@@ -57,34 +64,34 @@ export interface Shell {
     /**
      * assumed by security?
      */
-    navigateToLogout();
+    // navigateToLogout();
 
     /**
      * Emits an event for other packages to consume.
      */
     emit(eventType: string, params?: any);
 
-    /**
-     * Gives access to the identity service.
-     */
-    identity(): IdentityService;
+    // /**
+    //  * Gives access to the identity service.
+    //  */
+    // identity(): IdentityService;
 
-    /**
-     * Gives access to the audit service.
-     */
-    audit(): AuditService;
+    // /**
+    //  * Gives access to the audit service.
+    //  */
+    // audit(): AuditService;
 
-    /**
-     * Gives access to the analytics service.
-     */
-    analytics(): AnalyticsService;
+    // /**
+    //  * Gives access to the analytics service.
+    //  */
+    // analytics(): AnalyticsService;
 
     loadScript(url, timeout): Promise<HTMLScriptElement>;
 
     /**
      * Dependency injection? Will work well-known packages, but not really for dynamically loaded ones.
      */
-    getPackage(packageName: string): Package | undefined;
+    getService(serviceName: string): any;
 
     /**
      * Injector? this is a test...
@@ -92,38 +99,38 @@ export interface Shell {
     package(packageName: string, inlineConstructor: any[]);
 }
 
-export interface IdentityService {
-    updateIdentity(identity: Identity): void;
-    identity(): Promise<Identity>;
-    requireAuthenticatedIdentity(): Promise<Identity>;
-    logout(): void;
-}
+// export interface IdentityService {
+//     updateIdentity(identity: Identity): void;
+//     identity(): Promise<Identity>;
+//     requireAuthenticatedIdentity(): Promise<Identity>;
+//     logout(): void;
+// }
 
-export interface AuditService {
-    /**
-     * Audits a javascript error.
-     */
-    auditError(errorId: string, msg: string, err: any);
+// export interface AuditService {
+//     /**
+//      * Audits a javascript error.
+//      */
+//     auditError(errorId: string, msg: string, err: any);
 
-    /**
-     * Audits a web navigation.
-     */
-    auditNavigation(srcUrl: string, destUrl: string);
+//     /**
+//      * Audits a web navigation.
+//      */
+//     auditNavigation(srcUrl: string, destUrl: string);
 
-    /**
-     * Audits an error while invoking a rest service.
-     */
-    auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any);
+//     /**
+//      * Audits an error while invoking a rest service.
+//      */
+//     auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any);
 
-    /**
-     * Audit a generic event.
-     */
-    audit(eventId: string, eventType: string, params?: any);
-}
+//     /**
+//      * Audit a generic event.
+//      */
+//     audit(eventId: string, eventType: string, params?: any);
+// }
 
-export interface AnalyticsService {
-    ga(): Promise<UniversalAnalytics.ga>;
-}
+// export interface AnalyticsService {
+//     ga(): Promise<UniversalAnalytics.ga>;
+// }
 
 /**
  * A dynamically loaded package needs to implement this interface to
@@ -148,231 +155,231 @@ export interface Package {
     onEvent(eventType: string, params?: any);
 }
 
-export interface Identity {
-    /**
-     * If the current user is authenticated.
-     */
-    authenticated: boolean;
+// export interface Identity {
+//     /**
+//      * If the current user is authenticated.
+//      */
+//     authenticated: boolean;
 
-    /**
-     * The user's account used to open the current session.
-     */
-    currentAccount: Account;
+//     /**
+//      * The user's account used to open the current session.
+//      */
+//     currentAccount: Account;
 
-    /**
-     * The user if authenticated.
-     */
-    user?: User;
+//     /**
+//      * The user if authenticated.
+//      */
+//     user?: User;
 
-    /**
-     * Token to use for invoking secured services.
-     */
-    token?: Token;
+//     /**
+//      * Token to use for invoking secured services.
+//      */
+//     token?: Token;
 
-    /**
-     * Extra proprietary attributes.
-     */
-    attributes: any;
-}
+//     /**
+//      * Extra proprietary attributes.
+//      */
+//     attributes: any;
+// }
 
-export interface User {
+// export interface User {
 
-    /**
-     * If the current user is a system.
-     */
-    system: boolean;
+//     /**
+//      * If the current user is a system.
+//      */
+//     system: boolean;
 
-    /**
-     * User ids by system.
-     *
-     * The following are provided when using ulaval's identity system:
-     * - mpo: monPortail's internal id
-     * - ena: ena's internal id
-     * - set: idDossierIndividuEtudes
-     * - numeroDossier: Numéro de dossier used by the RIC
-     * - pidm: The PIDM used in Banner
-     * - codePermanent: permanent code
-     * - ni: numéro d'identification
-     */
-    userIdsBySystem: { [systeme: string]: string };
+//     /**
+//      * User ids by system.
+//      *
+//      * The following are provided when using ulaval's identity system:
+//      * - mpo: monPortail's internal id
+//      * - ena: ena's internal id
+//      * - set: idDossierIndividuEtudes
+//      * - numeroDossier: Numéro de dossier used by the RIC
+//      * - pidm: The PIDM used in Banner
+//      * - codePermanent: permanent code
+//      * - ni: numéro d'identification
+//      */
+//     userIdsBySystem: { [systeme: string]: string };
 
-    /**
-     * A user can have multiple accounts.
-     *
-     * For example, a Google and Facebook accounts.
-     */
-    accounts: Account[];
+//     /**
+//      * A user can have multiple accounts.
+//      *
+//      * For example, a Google and Facebook accounts.
+//      */
+//     accounts: Account[];
 
-    /**
-     * User's first name.
-     */
-    givenName?: string;
+//     /**
+//      * User's first name.
+//      */
+//     givenName?: string;
 
-    /**
-     * User's last name.
-     */
-    familyName?: string;
+//     /**
+//      * User's last name.
+//      */
+//     familyName?: string;
 
-    /**
-     * Primary email adresse to use when communicating with the user.
-     */
-    primaryEmailAdress: string;
+//     /**
+//      * Primary email adresse to use when communicating with the user.
+//      */
+//     primaryEmailAdress: string;
 
-    /**
-     * Is the user a male or a female.
-     */
-    gender?: 'male' | 'female';
+//     /**
+//      * Is the user a male or a female.
+//      */
+//     gender?: 'male' | 'female';
 
-    /**
-     * The user's birthdate.
-     */
-    birthdate?: Date;
+//     /**
+//      * The user's birthdate.
+//      */
+//     birthdate?: Date;
 
-    /**
-     * Is the user suspended.
-     */
-    suspended: boolean;
+//     /**
+//      * Is the user suspended.
+//      */
+//     suspended: boolean;
 
-    /**
-     * The user's expiration date.
-     */
-    expiration?: Date;
+//     /**
+//      * The user's expiration date.
+//      */
+//     expiration?: Date;
 
-    /**
-     * A user is active if he is not suspended or expired.
-     */
-    active: boolean;
+//     /**
+//      * A user is active if he is not suspended or expired.
+//      */
+//     active: boolean;
 
-    /**
-     * The user's preferences.
-     */
-    userPreferences: UserPreferences;
+//     /**
+//      * The user's preferences.
+//      */
+//     userPreferences: UserPreferences;
 
-    /**
-     * List of access granted to the current user.
-     */
-    accesses: Access[];
+//     /**
+//      * List of access granted to the current user.
+//      */
+//     accesses: Access[];
 
-    /**
-     * The change number increments each time a user is changed.
-     */
-    changeNumber: number;
-}
+//     /**
+//      * The change number increments each time a user is changed.
+//      */
+//     changeNumber: number;
+// }
 
-/**
- * The user's preferences contains all parameters that are completely under the control of the user.
- */
-export interface UserPreferences {
-    /**
-     * Visible name to show in forums and other collaborative tools.
-     */
-    pseudonym?: string;
+// /**
+//  * The user's preferences contains all parameters that are completely under the control of the user.
+//  */
+// export interface UserPreferences {
+//     /**
+//      * Visible name to show in forums and other collaborative tools.
+//      */
+//     pseudonym?: string;
 
-    /**
-     * Url to download the current picture of the user.
-     */
-    picture?: string;
+//     /**
+//      * Url to download the current picture of the user.
+//      */
+//     picture?: string;
 
-    /**
-     * Preferred language to communicate with the user.
-     */
-    lang: string;
+//     /**
+//      * Preferred language to communicate with the user.
+//      */
+//     lang: string;
 
-    /**
-     * Should we use the color blind version of the app.
-     */
-    colorBlind?: boolean;
+//     /**
+//      * Should we use the color blind version of the app.
+//      */
+//     colorBlind?: boolean;
 
-    /**
-     * Timezone to display date/times.
-     */
-    timezone?: string;
-}
+//     /**
+//      * Timezone to display date/times.
+//      */
+//     timezone?: string;
+// }
 
-/**
- * User account to allow a user to authenticate.
- */
-export interface Account {
-    /**
-     * The account type.
-     * If the user is not authenticated, the account type is 'anonymous'.
-     */
-    accountType: 'anonymous' | 'email' | 'google' | 'facebook' | 'ul' | string;
+// /**
+//  * User account to allow a user to authenticate.
+//  */
+// export interface Account {
+//     /**
+//      * The account type.
+//      * If the user is not authenticated, the account type is 'anonymous'.
+//      */
+//     accountType: 'anonymous' | 'email' | 'google' | 'facebook' | 'ul' | string;
 
-    /**
-     * The user name or email adress.
-     */
-    userName: 'anonymous' | string;
+//     /**
+//      * The user name or email adress.
+//      */
+//     userName: 'anonymous' | string;
 
-    /**
-     * The password expiration date.
-     */
-    pwdExpiration?: Date;
-}
+//     /**
+//      * The password expiration date.
+//      */
+//     pwdExpiration?: Date;
+// }
 
-export interface Token {
-    /**
-     * For example: 'Bearer'.
-     */
-    tokenType: string;
+// export interface Token {
+//     /**
+//      * For example: 'Bearer'.
+//      */
+//     tokenType: string;
 
-    /**
-     * The security token.
-     */
-    accessToken: string;
+//     /**
+//      * The security token.
+//      */
+//     accessToken: string;
 
-    /**
-     * The system for whom the token was generated.
-     */
-    clientId: string;
+//     /**
+//      * The system for whom the token was generated.
+//      */
+//     clientId: string;
 
-    /**
-     * The security scope of the token.
-     */
-    scope?: string;
+//     /**
+//      * The security scope of the token.
+//      */
+//     scope?: string;
 
-    /**
-     * The expiration time of the token.
-     */
-    expiration: Date;
-}
+//     /**
+//      * The expiration time of the token.
+//      */
+//     expiration: Date;
+// }
 
-export interface Access {
-    /**
-     * The source of the access.
-     */
-    src: string;
+// export interface Access {
+//     /**
+//      * The source of the access.
+//      */
+//     src: string;
 
-    /**
-     * The role granted.
-     */
-    role: string;
+//     /**
+//      * The role granted.
+//      */
+//     role: string;
 
-    resourceType: string;
+//     resourceType: string;
 
-    resourceId: string;
+//     resourceId: string;
 
-    /**
-     * The expiration time of the access.
-     * If null, the access has no expiration.
-     */
-    expiration?: Date;
+//     /**
+//      * The expiration time of the access.
+//      * If null, the access has no expiration.
+//      */
+//     expiration?: Date;
 
-    /**
-     * Was the access suspended by an administrator.
-     */
-    suspended: boolean;
+//     /**
+//      * Was the access suspended by an administrator.
+//      */
+//     suspended: boolean;
 
-    /**
-     * An access is active if it is not suspended and if it is not expired.
-     */
-    active: boolean;
+//     /**
+//      * An access is active if it is not suspended and if it is not expired.
+//      */
+//     active: boolean;
 
-    /**
-     * Was the access obtained through a group.
-     */
-    direct: boolean;
-}
+//     /**
+//      * Was the access obtained through a group.
+//      */
+//     direct: boolean;
+// }
 
 export interface PackageOptions {
     /**
@@ -446,23 +453,20 @@ class PackageState {
 }
 
 class ShellImpl implements Shell {
-    private readonly identityService: IdentityService;
-    private readonly auditService: AuditService;
-    private readonly analyticsService: AnalyticsService;
-    private readonly registeredPackages: { [packageName: string]: PackageState } = {};
+    // private readonly identityService: IdentityService;
+    // private readonly auditService: AuditService;
+    // private readonly analyticsService: AnalyticsService;
+    private readonly registeredPackages: PackagesMap = {};
+    private readonly services: ServicesMap = {};
     private currentPackage: PackageState;
 
-    public constructor(
-        identityServiceFactory: (shell: Shell) => IdentityService,
-        auditServiceFactory: (shell: Shell) => AuditService,
-        analyticsServiceFactory: (shell: Shell) => AnalyticsService
-    ) {
-        this.identityService = identityServiceFactory(this);
-        this.auditService = auditServiceFactory(this);
-        this.analyticsService = analyticsServiceFactory(this);
+    public constructor() {
+        // this.identityService = identityServiceFactory(this);
+        // this.auditService = auditServiceFactory(this);
+        // this.analyticsService = analyticsServiceFactory(this);
     }
 
-    registerPackage(packageOptions: PackageOptions) {
+    registerPackage(packageOptions: PackageOptions): void {
         if (this.registeredPackages[packageOptions.packageName]) {
             throw new Error(`Package + ${packageOptions.packageName} is already registered.`);
         }
@@ -470,10 +474,14 @@ class ShellImpl implements Shell {
         this.registeredPackages[packageOptions.packageName] = new PackageState(packageOptions);
     }
 
-    registerPackages(packagesOptions: [PackageOptions]) {
+    registerPackages(packagesOptions: [PackageOptions]): void {
         for (let i = 0; i < packagesOptions.length; ++i) {
             this.registerPackage(packagesOptions[i]);
         }
+    }
+
+    registerService(serviceName: string, service: any): void {
+        this.services[serviceName] = service;
     }
 
     loadPackage(packageName: string): Promise<Package> {
@@ -555,7 +563,7 @@ class ShellImpl implements Shell {
             (err) => {
                 packageState.state = State.LOADED;
                 packageState.unmountingPromise = null;
-                this.audit().auditError('0', `Error while unmounting package ${packageState.options.packageName}.`, err);
+                // this.audit().auditError('0', `Error while unmounting package ${packageState.options.packageName}.`, err);
                 return err;
             }
         );
@@ -582,49 +590,40 @@ class ShellImpl implements Shell {
         }
     }
 
-    start(cloak?: boolean) {
-        this.mountGuardPackage().then(() => {
-            if (cloak) {
-                let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
-                if (body.length > 0) {
-                    body[0].classList.add('shell-cloak');
-                }
-            }
-
-            window.addEventListener('popstate', (ev) => {
-                // Required to prevent the browser from overriding the url
-                window.setTimeout(() => this.showCurrentPackages(), 1);
-            });
-            this.showCurrentPackages();
-        }, () => this.navigateToAuthentification());
+    start() {
+        window.addEventListener('popstate', (ev) => {
+            // Required to prevent the browser from overriding the url
+            window.setTimeout(() => this.showCurrentPackages(), 1);
+        });
+        this.showCurrentPackages();
     }
 
-    navigateToAuthentification(): void {
-        window.location.replace(`${window.location.origin}/auth/deleguer?urlretour=${encodeURIComponent(window.location.href)}`);
-    }
+    // navigateToAuthentification(): void {
+    //     window.location.replace(`${window.location.origin}/auth/deleguer?urlretour=${encodeURIComponent(window.location.href)}`);
+    // }
 
-    navigateToLogout(): void {
-        window.location.href = `${window.location.origin}/auth/deconnecter/?interne=1&urlNouvelleConnexion=${window.location.origin}`;
-    }
+    // navigateToLogout(): void {
+    //     window.location.href = `${window.location.origin}/auth/deconnecter/?interne=1&urlNouvelleConnexion=${window.location.origin}`;
+    // }
 
-    uncloak(): void {
-        let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
-        if (body.length > 0) {
-            body[0].classList.remove('shell-cloak');
-        }
-    }
+    // uncloak(): void {
+    //     let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
+    //     if (body.length > 0) {
+    //         body[0].classList.remove('shell-cloak');
+    //     }
+    // }
 
-    identity(): IdentityService {
-        return this.identityService;
-    }
+    // identity(): IdentityService {
+    //     return this.identityService;
+    // }
 
-    audit(): AuditService {
-        return this.auditService;
-    }
+    // audit(): AuditService {
+    //     return this.auditService;
+    // }
 
-    analytics(): AnalyticsService {
-        return this.analyticsService;
-    }
+    // analytics(): AnalyticsService {
+    //     return this.analyticsService;
+    // }
 
     loadScript(url, timeout): Promise<HTMLScriptElement> {
         return new Promise((resolve, reject) => {
@@ -644,14 +643,13 @@ class ShellImpl implements Shell {
         });
     }
 
-    getPackage(packageName: string): Package | undefined {
-        return this.registeredPackages[packageName].package;
+    getService(serviceName: string): any {
+        return this.services[serviceName];
     }
 
     package(packageName: string, inlineConstructor: any[]) {
         let c = inlineConstructor[inlineConstructor.length - 1];
         let o: any = Object.create(c.prototype);
-        console.log('a', o, o.s);
         o.showMe();
         if (inlineConstructor.length == 1) {
             c.apply(o, []);
@@ -659,23 +657,22 @@ class ShellImpl implements Shell {
             c.apply(o, inlineConstructor.slice(0, inlineConstructor.length - 1));
         }
 
-        console.log('b', o, o.s);
         o.showMe();
     }
 
-    private mountGuardPackage(): Promise<Package | undefined> {
-        let result: Promise<Package | undefined> | undefined = undefined;
-        for (let packageName in this.registeredPackages) {
-            let packageState = this.registeredPackages[packageName];
-            if (packageState.options.guard) {
-                result = this.mountPackage(packageState.options.packageName);
-            }
-        }
-        if (!result) {
-            result = Promise.resolve(undefined);
-        }
-        return result;
-    }
+    // private mountGuardPackage(): Promise<Package | undefined> {
+    //     let result: Promise<Package | undefined> | undefined = undefined;
+    //     for (let packageName in this.registeredPackages) {
+    //         let packageState = this.registeredPackages[packageName];
+    //         if (packageState.options.guard) {
+    //             result = this.mountPackage(packageState.options.packageName);
+    //         }
+    //     }
+    //     if (!result) {
+    //         result = Promise.resolve(undefined);
+    //     }
+    //     return result;
+    // }
 
     private showCurrentPackages() {
         let path = window.location.pathname;
@@ -757,7 +754,7 @@ class ShellImpl implements Shell {
     private onPackageError(packageState: PackageState, err): any {
         packageState.loadingPromise = null;
         packageState.state = State.REGISTERED;
-        this.audit().auditError('0', `Error while loading package ${packageState.options.packageName}.`, err);
+        // this.audit().auditError('0', `Error while loading package ${packageState.options.packageName}.`, err);
         return err;
     }
 
@@ -781,7 +778,7 @@ class ShellImpl implements Shell {
             (err) => {
                 packageState.state = State.LOADED;
                 packageState.mountingPromise = null;
-                this.audit().auditError('0', `Error while mounting package ${packageState.options.packageName}.`, err);
+                // this.audit().auditError('0', `Error while mounting package ${packageState.options.packageName}.`, err);
                 throw err;
             });
 
