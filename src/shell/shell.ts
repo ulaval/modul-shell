@@ -30,7 +30,7 @@ export interface Shell {
     /**
      * Register a series of new packages so that they can be loaded and mounted.
      */
-    registerPackages(packagesOptions: [PackageOptions]);
+    registerPackages(packagesOptions: PackageOptions[]);
 
     registerService(serviceName: string, service: any);
 
@@ -414,7 +414,7 @@ export interface PackageOptions {
      * TODO: package always mounted, no matter the current package mounted for the selected path
      * TODO: or should be asked to be mounted by a another package, and remain mounted if already there...
      */
-    forceLoad?: boolean;
+    // forceLoad?: boolean;
 
     /**
      * For chunk loading, will set the __webpack_public_path__ var.
@@ -677,7 +677,7 @@ class ShellImpl implements Shell {
     private showCurrentPackages() {
         let path = window.location.pathname;
 
-        this.findPermanentPackages().forEach(packageState => this.mountPackage(packageState.options.packageName));
+        // this.findPermanentPackages().forEach(packageState => this.mountPackage(packageState.options.packageName));
 
         let packageState = this.findPackageByPath(path);
 
@@ -705,16 +705,16 @@ class ShellImpl implements Shell {
         }
     }
 
-    private findPermanentPackages(): PackageState[] {
-        let result: PackageState[] = [];
-        for (let packageName in this.registeredPackages) {
-            let packageState = this.registeredPackages[packageName];
-            if (packageState.options.forceLoad) {
-                result.push(packageState);
-            }
-        }
-        return result;
-    }
+    // private findPermanentPackages(): PackageState[] {
+    //     let result: PackageState[] = [];
+    //     for (let packageName in this.registeredPackages) {
+    //         let packageState = this.registeredPackages[packageName];
+    //         if (packageState.options.forceLoad) {
+    //             result.push(packageState);
+    //         }
+    //     }
+    //     return result;
+    // }
 
     private findPackageByPath(path: string): PackageState | null {
         let bestMatchLength = 0;
@@ -764,6 +764,7 @@ class ShellImpl implements Shell {
         }
 
         if (packageState.options.rootPath) {
+            // TODO: only one package per route path?
             this.currentPackage = packageState;
         }
 
