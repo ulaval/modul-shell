@@ -23,8 +23,6 @@
         "test": "npm run unit && npm run e2e",
         "tslint": "tslint -c conf/tslint.json -e 'src/**/*.d.ts' -e 'tests/unit/**/*.d.ts' -s node_modules/custom-tslint-formatters/formatters -t grouped 'src/**/*.ts' 'tests/unit/**/*.ts' 'tests/e2e/*.ts'"
     },
-    "main": "dist/shell.min.js",
-    "typings": "./src/shell/shell.d.ts",
     "dependencies": {},
     "devDependencies": {
         "@types/node": "^7.0.46",
