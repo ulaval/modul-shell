@@ -91,7 +91,7 @@ export interface Shell {
     /**
      * Dependency injection? Will work well-known packages, but not really for dynamically loaded ones.
      */
-    getService(serviceName: string): any;
+    getService<T>(serviceName: string): T;
 
     /**
      * Injector? this is a test...
@@ -411,20 +411,9 @@ export interface PackageOptions {
     params?: { [key: string]: any };
 
     /**
-     * TODO: package always mounted, no matter the current package mounted for the selected path
-     * TODO: or should be asked to be mounted by a another package, and remain mounted if already there...
-     */
-    // forceLoad?: boolean;
-
-    /**
      * For chunk loading, will set the __webpack_public_path__ var.
      */
     repoPublicPath?: string;
-
-    /**
-     * Packages loaded before the application starts
-     */
-    guard?: boolean;
 }
 
 enum State {
@@ -481,6 +470,9 @@ class ShellImpl implements Shell {
     }
 
     registerService(serviceName: string, service: any): void {
+        if (this.services[serviceName]) {
+            throw new Error(`There is already a registered service for ${serviceName}`);
+        }
         this.services[serviceName] = service;
     }
 
@@ -577,14 +569,10 @@ class ShellImpl implements Shell {
     }
 
     emit(eventType: string, params?: any) {
-        if (!event) {
-            return;
-        }
-
         for (let packageName in this.registeredPackages) {
             let packageState = this.registeredPackages[packageName];
 
-            if (packageState.state == State.MOUNTED && packageState.package) {
+            if (packageState.state == State.MOUNTED && packageState.package && packageState.package.onEvent) {
                 packageState.package.onEvent(eventType, params);
             }
         }
@@ -597,21 +585,6 @@ class ShellImpl implements Shell {
         });
         this.showCurrentPackages();
     }
-
-    // navigateToAuthentification(): void {
-    //     window.location.replace(`${window.location.origin}/auth/deleguer?urlretour=${encodeURIComponent(window.location.href)}`);
-    // }
-
-    // navigateToLogout(): void {
-    //     window.location.href = `${window.location.origin}/auth/deconnecter/?interne=1&urlNouvelleConnexion=${window.location.origin}`;
-    // }
-
-    // uncloak(): void {
-    //     let body: NodeListOf<HTMLBodyElement> = document.getElementsByTagName('body');
-    //     if (body.length > 0) {
-    //         body[0].classList.remove('shell-cloak');
-    //     }
-    // }
 
     // identity(): IdentityService {
     //     return this.identityService;
@@ -643,7 +616,7 @@ class ShellImpl implements Shell {
         });
     }
 
-    getService(serviceName: string): any {
+    getService<T>(serviceName: string): T {
         return this.services[serviceName];
     }
 
@@ -660,24 +633,8 @@ class ShellImpl implements Shell {
         o.showMe();
     }
 
-    // private mountGuardPackage(): Promise<Package | undefined> {
-    //     let result: Promise<Package | undefined> | undefined = undefined;
-    //     for (let packageName in this.registeredPackages) {
-    //         let packageState = this.registeredPackages[packageName];
-    //         if (packageState.options.guard) {
-    //             result = this.mountPackage(packageState.options.packageName);
-    //         }
-    //     }
-    //     if (!result) {
-    //         result = Promise.resolve(undefined);
-    //     }
-    //     return result;
-    // }
-
     private showCurrentPackages() {
         let path = window.location.pathname;
-
-        // this.findPermanentPackages().forEach(packageState => this.mountPackage(packageState.options.packageName));
 
         let packageState = this.findPackageByPath(path);
 
@@ -704,17 +661,6 @@ class ShellImpl implements Shell {
             this.mountPackage(packageState.options.packageName);
         }
     }
-
-    // private findPermanentPackages(): PackageState[] {
-    //     let result: PackageState[] = [];
-    //     for (let packageName in this.registeredPackages) {
-    //         let packageState = this.registeredPackages[packageName];
-    //         if (packageState.options.forceLoad) {
-    //             result.push(packageState);
-    //         }
-    //     }
-    //     return result;
-    // }
 
     private findPackageByPath(path: string): PackageState | null {
         let bestMatchLength = 0;
@@ -786,21 +732,3 @@ class ShellImpl implements Shell {
         return packageState.mountingPromise;
     }
 }
-
-// function loadScript(url, timeout): Promise<HTMLScriptElement> {
-//     return new Promise((resolve, reject) => {
-//         try {
-//             const head = document.getElementsByTagName('head')[0];
-//             const script = document.createElement('script');
-//             script.type = 'text/javascript';
-//             script.charset = 'utf-8';
-//             script.async = true;
-//             script.src = url;
-//             script.onload = () => resolve(script);
-//             script.onerror = (err) => reject(err);
-//             head.appendChild(script);
-//         } catch (e) {
-//             reject(e);
-//         }
-//     });
-// }
