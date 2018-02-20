@@ -16,6 +16,13 @@ type ServicesMap = {
     [serviceName: string]: any
 };
 
+export class NoPackageForPathError extends Error {
+    constructor(msg, public path) {
+        super(msg);
+        this.name = 'NoPackageForPathError';
+    }
+}
+
 // type InlineConstructor<T> = (...args: any[]) => T;
 
 /**
@@ -54,17 +61,10 @@ export interface Shell {
      */
     start();
 
-    // uncloak(): void;
-
     /**
      * Allows to navigate between packages.
      */
-    navigateTo(pathName: string);
-
-    /**
-     * assumed by security?
-     */
-    // navigateToLogout();
+    navigateTo(pathName: string): void;
 
     /**
      * Emits an event for other packages to consume.
@@ -96,7 +96,7 @@ export interface Shell {
     /**
      * Injector? this is a test...
      */
-    package(packageName: string, inlineConstructor: any[]);
+    // package(packageName: string, inlineConstructor: any[]);
 }
 
 // export interface IdentityService {
@@ -488,21 +488,21 @@ class ShellImpl implements Shell {
 
             packageState.loadingPromise = packageState.options.load()
                 .then(
-                mod => this.onPackageLoaded(packageState, mod),
-                err => {
-                    this.onPackageError(packageState, err);
-                    throw err;
-                });
+                    mod => this.onPackageLoaded(packageState, mod),
+                    err => {
+                        this.onPackageError(packageState, err);
+                        throw err;
+                    });
         } else {
             packageState.loadingPromise = this.loadScript(packageState.options.load, 10000)
                 .then(
-                mod => {
-                    return this.onPackageLoaded(packageState, window[packageName]);
-                },
-                err => {
-                    this.onPackageError(packageState, err);
-                    throw err;
-                });
+                    mod => {
+                        return this.onPackageLoaded(packageState, window[packageName]);
+                    },
+                    err => {
+                        this.onPackageError(packageState, err);
+                        throw err;
+                    });
         }
 
         return packageState.loadingPromise;
@@ -563,7 +563,7 @@ class ShellImpl implements Shell {
         return packageState.unmountingPromise;
     }
 
-    navigateTo(path: string) {
+    navigateTo(path: string): void {
         history.pushState(path, path, path);
         this.showCurrentPackages();
     }
@@ -580,6 +580,7 @@ class ShellImpl implements Shell {
 
     start() {
         window.addEventListener('popstate', (ev) => {
+            console.log(ev);
             // Required to prevent the browser from overriding the url
             window.setTimeout(() => this.showCurrentPackages(), 1);
         });
@@ -620,43 +621,41 @@ class ShellImpl implements Shell {
         return this.services[serviceName];
     }
 
-    package(packageName: string, inlineConstructor: any[]) {
-        let c = inlineConstructor[inlineConstructor.length - 1];
-        let o: any = Object.create(c.prototype);
-        o.showMe();
-        if (inlineConstructor.length == 1) {
-            c.apply(o, []);
-        } else {
-            c.apply(o, inlineConstructor.slice(0, inlineConstructor.length - 1));
-        }
+    // package(packageName: string, inlineConstructor: any[]) {
+    //     let c = inlineConstructor[inlineConstructor.length - 1];
+    //     let o: any = Object.create(c.prototype);
+    //     o.showMe();
+    //     if (inlineConstructor.length == 1) {
+    //         c.apply(o, []);
+    //     } else {
+    //         c.apply(o, inlineConstructor.slice(0, inlineConstructor.length - 1));
+    //     }
 
-        o.showMe();
-    }
+    //     o.showMe();
+    // }
 
-    private showCurrentPackages() {
+    private showCurrentPackages(): void {
         let path = window.location.pathname;
 
         let packageState = this.findPackageByPath(path);
 
         if (packageState == null) {
-            console.warn(`No package matches "${path}"`);
-
             if (this.currentPackage) {
                 this.unmountPackage(this.currentPackage.options.packageName);
             }
 
-            return;
+            throw new NoPackageForPathError(`No package matches "${path}"`, path);
         }
 
-        if (this.currentPackage === packageState) {
+        if (this.currentPackage && this.currentPackage === packageState) {
             return;
         }
 
         if (this.currentPackage) {
             this.unmountPackage(this.currentPackage.options.packageName)
                 .then(
-                () => this.mountPackage((packageState as PackageState).options.packageName),
-                () => this.mountPackage((packageState as PackageState).options.packageName));
+                    () => this.mountPackage((packageState as PackageState).options.packageName),
+                    () => this.mountPackage((packageState as PackageState).options.packageName));
         } else {
             this.mountPackage(packageState.options.packageName);
         }
