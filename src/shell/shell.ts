@@ -1,12 +1,19 @@
+export const SHELL_GLOBAL_VAR: string = 'modul-shell';
 
 /**
  * Creates a shell to handle a multi-package application.
  *
- * @param identityServiceFactory The factory to create an identity service
- * @param auditServiceFactory The factory to create an audit service
- * @param analyticsServiceFactory  The factory to create an analytics service
+ * @param global 'True' will install the shell in the window global variable
  */
-export const createShell = () => new ShellImpl() as Shell;
+export const createShell: (global?: boolean) => Shell = global => {
+    let shell: Shell = new ShellImpl();
+
+    if (global) {
+        window[SHELL_GLOBAL_VAR] = shell;
+    }
+
+    return shell;
+};
 
 type PackagesMap = {
     [packageName: string]: PackageState
