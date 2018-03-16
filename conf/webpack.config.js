@@ -55,9 +55,10 @@ function createConfig(options) {
 
     // If production, we compress the output
     if (options.prod) {
-        conf.plugins.push(new UglifyjsWebpackPlugin({
-            comments: false
-        }));
+        // TODO: got throw new _ValidationError2.default(ajv.errors, name);
+        // conf.plugins.push(new UglifyjsWebpackPlugin({
+        //     comments: false
+        // }));
     }
 
     // If debug, we add the file index.html to startup the app

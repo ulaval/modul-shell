@@ -10,7 +10,7 @@
     },
     "scripts": {
         "build": "rimraf dist/**/* && npm run tslint && tsc",
-        "buildDev": "rimraf dist/**/* && webpack --config conf/webpack.config.js --color",
+        "buildWebpack": "rimraf dist/**/* && webpack --config conf/webpack.config.js --color",
         "clean": "rimraf dist",
         "declarations": "node conf/declarations.js",
         "dev": "webpack-dev-server --config conf/webpack.config.js --content-base src --colors --port 5000 --history-api-fallback",
