@@ -30,8 +30,6 @@ export class NoPackageForPathError extends Error {
     }
 }
 
-// type InlineConstructor<T> = (...args: any[]) => T;
-
 /**
  * Interface to cummunicate with the shell.
  */
@@ -46,6 +44,9 @@ export interface Shell {
      */
     registerPackages(packagesOptions: PackageOptions[]);
 
+    /**
+     * Register a service (can be an object, a function etc.) with a key name.
+     */
     registerService(serviceName: string, service: any);
 
     /**
@@ -78,66 +79,13 @@ export interface Shell {
      */
     emit(eventType: string, params?: any);
 
-    // /**
-    //  * Gives access to the identity service.
-    //  */
-    // identity(): IdentityService;
-
-    // /**
-    //  * Gives access to the audit service.
-    //  */
-    // audit(): AuditService;
-
-    // /**
-    //  * Gives access to the analytics service.
-    //  */
-    // analytics(): AnalyticsService;
-
     loadScript(url, timeout): Promise<HTMLScriptElement>;
 
     /**
-     * Dependency injection? Will work well-known packages, but not really for dynamically loaded ones.
+     * Returns a registered service by its name.
      */
     getService<T>(serviceName: string): T;
-
-    /**
-     * Injector? this is a test...
-     */
-    // package(packageName: string, inlineConstructor: any[]);
 }
-
-// export interface IdentityService {
-//     updateIdentity(identity: Identity): void;
-//     identity(): Promise<Identity>;
-//     requireAuthenticatedIdentity(): Promise<Identity>;
-//     logout(): void;
-// }
-
-// export interface AuditService {
-//     /**
-//      * Audits a javascript error.
-//      */
-//     auditError(errorId: string, msg: string, err: any);
-
-//     /**
-//      * Audits a web navigation.
-//      */
-//     auditNavigation(srcUrl: string, destUrl: string);
-
-//     /**
-//      * Audits an error while invoking a rest service.
-//      */
-//     auditRestError(errorId: string, url: string, method: string, params: any, statusCode: number, data?: any);
-
-//     /**
-//      * Audit a generic event.
-//      */
-//     audit(eventId: string, eventType: string, params?: any);
-// }
-
-// export interface AnalyticsService {
-//     ga(): Promise<UniversalAnalytics.ga>;
-// }
 
 /**
  * A dynamically loaded package needs to implement this interface to
@@ -161,232 +109,6 @@ export interface Package {
      */
     onEvent(eventType: string, params?: any);
 }
-
-// export interface Identity {
-//     /**
-//      * If the current user is authenticated.
-//      */
-//     authenticated: boolean;
-
-//     /**
-//      * The user's account used to open the current session.
-//      */
-//     currentAccount: Account;
-
-//     /**
-//      * The user if authenticated.
-//      */
-//     user?: User;
-
-//     /**
-//      * Token to use for invoking secured services.
-//      */
-//     token?: Token;
-
-//     /**
-//      * Extra proprietary attributes.
-//      */
-//     attributes: any;
-// }
-
-// export interface User {
-
-//     /**
-//      * If the current user is a system.
-//      */
-//     system: boolean;
-
-//     /**
-//      * User ids by system.
-//      *
-//      * The following are provided when using ulaval's identity system:
-//      * - mpo: monPortail's internal id
-//      * - ena: ena's internal id
-//      * - set: idDossierIndividuEtudes
-//      * - numeroDossier: Numéro de dossier used by the RIC
-//      * - pidm: The PIDM used in Banner
-//      * - codePermanent: permanent code
-//      * - ni: numéro d'identification
-//      */
-//     userIdsBySystem: { [systeme: string]: string };
-
-//     /**
-//      * A user can have multiple accounts.
-//      *
-//      * For example, a Google and Facebook accounts.
-//      */
-//     accounts: Account[];
-
-//     /**
-//      * User's first name.
-//      */
-//     givenName?: string;
-
-//     /**
-//      * User's last name.
-//      */
-//     familyName?: string;
-
-//     /**
-//      * Primary email adresse to use when communicating with the user.
-//      */
-//     primaryEmailAdress: string;
-
-//     /**
-//      * Is the user a male or a female.
-//      */
-//     gender?: 'male' | 'female';
-
-//     /**
-//      * The user's birthdate.
-//      */
-//     birthdate?: Date;
-
-//     /**
-//      * Is the user suspended.
-//      */
-//     suspended: boolean;
-
-//     /**
-//      * The user's expiration date.
-//      */
-//     expiration?: Date;
-
-//     /**
-//      * A user is active if he is not suspended or expired.
-//      */
-//     active: boolean;
-
-//     /**
-//      * The user's preferences.
-//      */
-//     userPreferences: UserPreferences;
-
-//     /**
-//      * List of access granted to the current user.
-//      */
-//     accesses: Access[];
-
-//     /**
-//      * The change number increments each time a user is changed.
-//      */
-//     changeNumber: number;
-// }
-
-// /**
-//  * The user's preferences contains all parameters that are completely under the control of the user.
-//  */
-// export interface UserPreferences {
-//     /**
-//      * Visible name to show in forums and other collaborative tools.
-//      */
-//     pseudonym?: string;
-
-//     /**
-//      * Url to download the current picture of the user.
-//      */
-//     picture?: string;
-
-//     /**
-//      * Preferred language to communicate with the user.
-//      */
-//     lang: string;
-
-//     /**
-//      * Should we use the color blind version of the app.
-//      */
-//     colorBlind?: boolean;
-
-//     /**
-//      * Timezone to display date/times.
-//      */
-//     timezone?: string;
-// }
-
-// /**
-//  * User account to allow a user to authenticate.
-//  */
-// export interface Account {
-//     /**
-//      * The account type.
-//      * If the user is not authenticated, the account type is 'anonymous'.
-//      */
-//     accountType: 'anonymous' | 'email' | 'google' | 'facebook' | 'ul' | string;
-
-//     /**
-//      * The user name or email adress.
-//      */
-//     userName: 'anonymous' | string;
-
-//     /**
-//      * The password expiration date.
-//      */
-//     pwdExpiration?: Date;
-// }
-
-// export interface Token {
-//     /**
-//      * For example: 'Bearer'.
-//      */
-//     tokenType: string;
-
-//     /**
-//      * The security token.
-//      */
-//     accessToken: string;
-
-//     /**
-//      * The system for whom the token was generated.
-//      */
-//     clientId: string;
-
-//     /**
-//      * The security scope of the token.
-//      */
-//     scope?: string;
-
-//     /**
-//      * The expiration time of the token.
-//      */
-//     expiration: Date;
-// }
-
-// export interface Access {
-//     /**
-//      * The source of the access.
-//      */
-//     src: string;
-
-//     /**
-//      * The role granted.
-//      */
-//     role: string;
-
-//     resourceType: string;
-
-//     resourceId: string;
-
-//     /**
-//      * The expiration time of the access.
-//      * If null, the access has no expiration.
-//      */
-//     expiration?: Date;
-
-//     /**
-//      * Was the access suspended by an administrator.
-//      */
-//     suspended: boolean;
-
-//     /**
-//      * An access is active if it is not suspended and if it is not expired.
-//      */
-//     active: boolean;
-
-//     /**
-//      * Was the access obtained through a group.
-//      */
-//     direct: boolean;
-// }
 
 export interface PackageOptions {
     /**
@@ -449,18 +171,9 @@ class PackageState {
 }
 
 class ShellImpl implements Shell {
-    // private readonly identityService: IdentityService;
-    // private readonly auditService: AuditService;
-    // private readonly analyticsService: AnalyticsService;
     private readonly registeredPackages: PackagesMap = {};
     private readonly services: ServicesMap = {};
     private currentPackage: PackageState;
-
-    public constructor() {
-        // this.identityService = identityServiceFactory(this);
-        // this.auditService = auditServiceFactory(this);
-        // this.analyticsService = analyticsServiceFactory(this);
-    }
 
     registerPackage(packageOptions: PackageOptions): void {
         if (this.registeredPackages[packageOptions.packageName]) {
@@ -562,7 +275,6 @@ class ShellImpl implements Shell {
             (err) => {
                 packageState.state = State.LOADED;
                 packageState.unmountingPromise = null;
-                // this.audit().auditError('0', `Error while unmounting package ${packageState.options.packageName}.`, err);
                 return err;
             }
         );
@@ -594,18 +306,6 @@ class ShellImpl implements Shell {
         this.showCurrentPackages();
     }
 
-    // identity(): IdentityService {
-    //     return this.identityService;
-    // }
-
-    // audit(): AuditService {
-    //     return this.auditService;
-    // }
-
-    // analytics(): AnalyticsService {
-    //     return this.analyticsService;
-    // }
-
     loadScript(url, timeout): Promise<HTMLScriptElement> {
         return new Promise((resolve, reject) => {
             try {
@@ -627,19 +327,6 @@ class ShellImpl implements Shell {
     getService<T>(serviceName: string): T {
         return this.services[serviceName];
     }
-
-    // package(packageName: string, inlineConstructor: any[]) {
-    //     let c = inlineConstructor[inlineConstructor.length - 1];
-    //     let o: any = Object.create(c.prototype);
-    //     o.showMe();
-    //     if (inlineConstructor.length == 1) {
-    //         c.apply(o, []);
-    //     } else {
-    //         c.apply(o, inlineConstructor.slice(0, inlineConstructor.length - 1));
-    //     }
-
-    //     o.showMe();
-    // }
 
     private showCurrentPackages(): void {
         let path = window.location.pathname;
@@ -706,7 +393,6 @@ class ShellImpl implements Shell {
     private onPackageError(packageState: PackageState, err): any {
         packageState.loadingPromise = null;
         packageState.state = State.REGISTERED;
-        // this.audit().auditError('0', `Error while loading package ${packageState.options.packageName}.`, err);
         return err;
     }
 
@@ -731,7 +417,6 @@ class ShellImpl implements Shell {
             (err) => {
                 packageState.state = State.LOADED;
                 packageState.mountingPromise = null;
-                // this.audit().auditError('0', `Error while mounting package ${packageState.options.packageName}.`, err);
                 throw err;
             });
 

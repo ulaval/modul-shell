@@ -16,10 +16,7 @@ function createConfig(options) {
 
         output: {
             path: resolve('dist'),
-            // library: '@ulaval/shell-ui' + (options.entry == 'shell' ? '' : '/' + options.entry),
-            // libraryTarget: 'umd',
             filename: options.entry + (options.prod ? '.min' : '') + '.js',
-            // umdNamedDefine: true,
             publicPath: '/'
         },
 
@@ -77,7 +74,7 @@ function createConfig(options) {
 
 const variants = {
     prod: [true, false],
-    entry: ['shell', 'mpo', 'dev']
+    entry: ['shell']
 };
 
 module.exports = function (env) {
