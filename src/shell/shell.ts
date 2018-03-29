@@ -1,18 +1,10 @@
-export const SHELL_GLOBAL_VAR: string = 'modul-shell';
+export type ShellErrorHandler = (error: Error) => void;
 
 /**
  * Creates a shell to handle a multi-package application.
- *
- * @param global 'True' will install the shell in the window global variable
  */
-export const createShell: (global?: boolean) => Shell = global => {
-    let shell: Shell = new ShellImpl();
-
-    if (global) {
-        window[SHELL_GLOBAL_VAR] = shell;
-    }
-
-    return shell;
+export const createShell: (errorHandler?: ShellErrorHandler) => Shell = errorHandler => {
+    return new ShellImpl(errorHandler);
 };
 
 type PackagesMap = {
@@ -22,13 +14,6 @@ type PackagesMap = {
 type ServicesMap = {
     [serviceName: string]: any
 };
-
-export class NoPackageForPathError extends Error {
-    constructor(msg, public path) {
-        super(msg);
-        this.name = 'NoPackageForPathError';
-    }
-}
 
 /**
  * Interface to cummunicate with the shell.
@@ -173,7 +158,10 @@ class PackageState {
 class ShellImpl implements Shell {
     private readonly registeredPackages: PackagesMap = {};
     private readonly services: ServicesMap = {};
-    private currentPackage: PackageState;
+    private currentPackage: PackageState | undefined;
+
+    constructor(private errorHandler: ShellErrorHandler | undefined) {
+    }
 
     registerPackage(packageOptions: PackageOptions): void {
         if (this.registeredPackages[packageOptions.packageName]) {
@@ -299,7 +287,6 @@ class ShellImpl implements Shell {
 
     start() {
         window.addEventListener('popstate', (ev) => {
-            console.log(ev);
             // Required to prevent the browser from overriding the url
             window.setTimeout(() => this.showCurrentPackages(), 1);
         });
@@ -329,29 +316,51 @@ class ShellImpl implements Shell {
     }
 
     private showCurrentPackages(): void {
+        this.internalShowCurrentPackages().catch(e => {
+            if (this.errorHandler) {
+                this.errorHandler(e);
+            } else {
+                console.error('shell error', e);
+            }
+        });
+    }
+
+    private internalShowCurrentPackages(): Promise<any> {
         let path = window.location.pathname;
 
         let packageState = this.findPackageByPath(path);
 
         if (packageState == null) {
-            if (this.currentPackage) {
-                this.unmountPackage(this.currentPackage.options.packageName);
-            }
+            let packageNotFoundRejection: Promise<any> = Promise.reject(new Error(`No package matches "${path}"`));
 
-            throw new NoPackageForPathError(`No package matches "${path}"`, path);
+            if (this.currentPackage) {
+                let packageName: string = this.currentPackage.options.packageName;
+                this.currentPackage = undefined;
+                return this.unmountPackage(packageName).then(
+                    () => packageNotFoundRejection,
+                    (e) => {
+                        console.error(e);
+                        return packageNotFoundRejection;
+                    });
+            } else {
+                return packageNotFoundRejection;
+            }
         }
 
         if (this.currentPackage && this.currentPackage === packageState) {
-            return;
+            return Promise.resolve();
         }
 
         if (this.currentPackage) {
-            this.unmountPackage(this.currentPackage.options.packageName)
+            return this.unmountPackage(this.currentPackage.options.packageName)
                 .then(
                     () => this.mountPackage((packageState as PackageState).options.packageName),
-                    () => this.mountPackage((packageState as PackageState).options.packageName));
+                    (e) => {
+                        console.error(e);
+                        return this.mountPackage((packageState as PackageState).options.packageName);
+                    });
         } else {
-            this.mountPackage(packageState.options.packageName);
+            return this.mountPackage(packageState.options.packageName);
         }
     }
 
