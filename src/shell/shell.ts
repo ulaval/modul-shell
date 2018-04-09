@@ -57,7 +57,7 @@ export interface Shell {
     /**
      * Allows to navigate between packages.
      */
-    navigateTo(pathName: string): void;
+    navigateTo(pathName: string, replace?: boolean): void;
 
     /**
      * Emits an event for other packages to consume.
@@ -104,7 +104,7 @@ export interface PackageOptions {
     /**
      * A callback to load the package or an URL to dynamically load a javascript.
      */
-    load: (() => Promise<Package>) | string;
+    load: (() => Promise<Package>) | string | string[];
 
     /**
      * The root path of the package. For example: '/courses'.
@@ -202,7 +202,24 @@ class ShellImpl implements Shell {
                         throw err;
                     });
         } else {
-            packageState.loadingPromise = this.loadScript(packageState.options.load, 10000)
+            let scriptsPromise: Promise<any>;
+            if (packageState.options.load instanceof Array) {
+                const urlsToLoad = [...packageState.options.load];
+                const loadNext = (resolve, reject) => {
+                    if (urlsToLoad.length > 0) {
+                        this.loadScript(urlsToLoad.shift(), 10000)
+                            .then(() => loadNext(resolve, reject))
+                            .catch((err) => reject(err));
+                    } else {
+                        resolve();
+                    }
+                };
+                scriptsPromise = new Promise((resolve, reject) => loadNext(resolve, reject));
+            } else {
+                scriptsPromise = this.loadScript(packageState.options.load, 10000);
+            }
+
+            packageState.loadingPromise = scriptsPromise
                 .then(
                     mod => {
                         return this.onPackageLoaded(packageState, window[packageName]);
@@ -270,8 +287,12 @@ class ShellImpl implements Shell {
         return packageState.unmountingPromise;
     }
 
-    navigateTo(path: string): void {
-        history.pushState(path, path, path);
+    navigateTo(path: string, replace?: boolean): void {
+        if (!replace) {
+            history.pushState(path, path, path);
+        } else {
+            history.replaceState(path, path, path);
+        }
         this.showCurrentPackages();
     }
 
