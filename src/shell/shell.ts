@@ -241,7 +241,11 @@ class ShellImpl implements Shell {
         }
 
         if (packageState.state == State.MOUNTED) {
-            return Promise.resolve(packageState.package);
+            if (packageState.package) {
+                return Promise.resolve(packageState.package);
+            } else {
+                throw new Error(`The package ${packageName} is marked as MOUNTED but has no package assigned`);
+            }
         }
 
         if (packageState.state == State.LOADED) {
