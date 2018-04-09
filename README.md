@@ -4,5 +4,3 @@ This library aims at creating a way to create a single page application includin
 independant teams to work on the same application.
 
 For example, a package could be developed using Vue.js and another one could use Angularjs.
-
-The shell provides common services like audit, analytics, identity, events and inter-package navigation.
