@@ -270,7 +270,7 @@ class ShellImpl implements Shell {
             return packageState.unmountingPromise;
         }
 
-        if (packageState.state != State.MOUNTED || !packageState.package) {
+        if ((packageState.state != State.MOUNTED && packageState.state != State.MOUNTING) || !packageState.package) {
             return Promise.reject(new Error(`The package ${packageName} is not mounted: ${packageState.state}.`));
         }
 
