@@ -13,8 +13,6 @@ type ServicesMap = {
     [serviceName: string]: any
 };
 
-// export type NavGuardFn = (from: PackageOptions | undefined, to: PackageOptions | undefined, next: (proceed: boolean) => void) => void;
-
 /**
  * Interface to cummunicate with the shell.
  */
@@ -315,15 +313,6 @@ class ShellImpl implements Shell {
     start() {
         window.addEventListener('popstate', (ev) => {
             window.setTimeout(() => this.showCurrentPackages(), 1);
-            // let next = (prooceed: boolean) => {
-            //     if (prooceed) {
-            //         // Required to prevent the browser from overriding the url
-            //         window.setTimeout(() => this.internalShowCurrentPackages(), 1);
-            //     } else {
-            //         ev.stopImmediatePropagation();
-            //     }
-            // };
-            // this.doBeforeNavigate(next);
         });
         this.showCurrentPackages();
     }
@@ -350,28 +339,10 @@ class ShellImpl implements Shell {
         return this.services[serviceName];
     }
 
-    // beforeNavigate(guard: NavGuardFn) {
-    //     this.beforeNavigateGuard = guard;
-    // }
-
     getPackageOptionsByPath(path: string): PackageOptions | undefined {
         let packageState: PackageState | null = this.findPackageByPath(path);
         return packageState ? packageState.options : undefined;
     }
-
-    // private doBeforeNavigate(nextFn: (proceed: boolean) => void): void {
-    //     let path = window.location.pathname;
-
-    //     let packageState = this.findPackageByPath(path);
-
-    //     if (this.beforeNavigateGuard) {
-    //         let from: PackageOptions | undefined = this.currentPackage ? this.currentPackage.options : undefined;
-    //         let to: PackageOptions | undefined = packageState ? packageState.options : undefined;
-    //         this.beforeNavigateGuard(from, to, nextFn);
-    //     } else {
-    //         nextFn(true);
-    //     }
-    // }
 
     private showCurrentPackages(): void {
         let path = window.location.pathname;
@@ -402,20 +373,6 @@ class ShellImpl implements Shell {
         } else {
             this.mountPackage(packageState.options.packageName);
         }
-
-        // let next = (proceed: boolean) => {
-        //     if (proceed) {
-        //         this.internalShowCurrentPackages();
-        //     }
-        // };
-
-        // if (this.beforeNavigateGuard) {
-        //     let from: PackageOptions | undefined = this.currentPackage ? this.currentPackage.options : undefined;
-        //     let to: PackageOptions | undefined = packageState ? packageState.options : undefined;
-        //     this.beforeNavigateGuard(from, to, next);
-        // } else {
-        //     next(true);
-        // }
     }
 
     private findPackageByPath(path: string): PackageState | null {
