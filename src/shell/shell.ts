@@ -3,9 +3,7 @@ export type ShellErrorHandler = (error: Error) => void;
 /**
  * Creates a shell to handle a multi-package application.
  */
-export const createShell: (errorHandler?: ShellErrorHandler) => Shell = errorHandler => {
-    return new ShellImpl(errorHandler);
-};
+export const createShell: () => Shell = () => new ShellImpl();
 
 type PackagesMap = {
     [packageName: string]: PackageState
@@ -14,6 +12,8 @@ type PackagesMap = {
 type ServicesMap = {
     [serviceName: string]: any
 };
+
+// export type NavGuardFn = (from: PackageOptions | undefined, to: PackageOptions | undefined, next: (proceed: boolean) => void) => void;
 
 /**
  * Interface to cummunicate with the shell.
@@ -70,6 +70,11 @@ export interface Shell {
      * Returns a registered service by its name.
      */
     getService<T>(serviceName: string): T;
+
+    /**
+     * Returns the options object that matches the path parameter.
+     */
+    getPackageOptionsByPath(path: string): PackageOptions | undefined;
 }
 
 /**
@@ -159,9 +164,6 @@ class ShellImpl implements Shell {
     private readonly registeredPackages: PackagesMap = {};
     private readonly services: ServicesMap = {};
     private currentPackage: PackageState | undefined;
-
-    constructor(private errorHandler: ShellErrorHandler | undefined) {
-    }
 
     registerPackage(packageOptions: PackageOptions): void {
         if (this.registeredPackages[packageOptions.packageName]) {
@@ -312,8 +314,16 @@ class ShellImpl implements Shell {
 
     start() {
         window.addEventListener('popstate', (ev) => {
-            // Required to prevent the browser from overriding the url
             window.setTimeout(() => this.showCurrentPackages(), 1);
+            // let next = (prooceed: boolean) => {
+            //     if (prooceed) {
+            //         // Required to prevent the browser from overriding the url
+            //         window.setTimeout(() => this.internalShowCurrentPackages(), 1);
+            //     } else {
+            //         ev.stopImmediatePropagation();
+            //     }
+            // };
+            // this.doBeforeNavigate(next);
         });
         this.showCurrentPackages();
     }
@@ -340,53 +350,72 @@ class ShellImpl implements Shell {
         return this.services[serviceName];
     }
 
-    private showCurrentPackages(): void {
-        this.internalShowCurrentPackages().catch(e => {
-            if (this.errorHandler) {
-                this.errorHandler(e);
-            } else {
-                console.error('shell error', e);
-            }
-        });
+    // beforeNavigate(guard: NavGuardFn) {
+    //     this.beforeNavigateGuard = guard;
+    // }
+
+    getPackageOptionsByPath(path: string): PackageOptions | undefined {
+        let packageState: PackageState | null = this.findPackageByPath(path);
+        return packageState ? packageState.options : undefined;
     }
 
-    private internalShowCurrentPackages(): Promise<any> {
+    // private doBeforeNavigate(nextFn: (proceed: boolean) => void): void {
+    //     let path = window.location.pathname;
+
+    //     let packageState = this.findPackageByPath(path);
+
+    //     if (this.beforeNavigateGuard) {
+    //         let from: PackageOptions | undefined = this.currentPackage ? this.currentPackage.options : undefined;
+    //         let to: PackageOptions | undefined = packageState ? packageState.options : undefined;
+    //         this.beforeNavigateGuard(from, to, nextFn);
+    //     } else {
+    //         nextFn(true);
+    //     }
+    // }
+
+    private showCurrentPackages(): void {
         let path = window.location.pathname;
 
         let packageState = this.findPackageByPath(path);
 
         if (packageState == null) {
-            let packageNotFoundRejection: Promise<any> = Promise.reject(new Error(`No package matches "${path}"`));
+            console.warn(`No package matches "${path}"`);
 
             if (this.currentPackage) {
                 let packageName: string = this.currentPackage.options.packageName;
                 this.currentPackage = undefined;
-                return this.unmountPackage(packageName).then(
-                    () => packageNotFoundRejection,
-                    (e) => {
-                        console.error(e);
-                        return packageNotFoundRejection;
-                    });
-            } else {
-                return packageNotFoundRejection;
+                this.unmountPackage(packageName);
             }
+
+            return;
         }
 
         if (this.currentPackage && this.currentPackage === packageState) {
-            return Promise.resolve();
+            return;
         }
 
         if (this.currentPackage) {
-            return this.unmountPackage(this.currentPackage.options.packageName)
+            this.unmountPackage(this.currentPackage.options.packageName)
                 .then(
                     () => this.mountPackage((packageState as PackageState).options.packageName),
-                    (e) => {
-                        console.error(e);
-                        return this.mountPackage((packageState as PackageState).options.packageName);
-                    });
+                    () => this.mountPackage((packageState as PackageState).options.packageName));
         } else {
-            return this.mountPackage(packageState.options.packageName);
+            this.mountPackage(packageState.options.packageName);
         }
+
+        // let next = (proceed: boolean) => {
+        //     if (proceed) {
+        //         this.internalShowCurrentPackages();
+        //     }
+        // };
+
+        // if (this.beforeNavigateGuard) {
+        //     let from: PackageOptions | undefined = this.currentPackage ? this.currentPackage.options : undefined;
+        //     let to: PackageOptions | undefined = packageState ? packageState.options : undefined;
+        //     this.beforeNavigateGuard(from, to, next);
+        // } else {
+        //     next(true);
+        // }
     }
 
     private findPackageByPath(path: string): PackageState | null {
