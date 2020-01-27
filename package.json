@@ -1,6 +1,6 @@
 {
     "name": "@ulaval/modul-shell",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "description": "Javascript lib to help bootstrap a multi-modules application.",
     "author": "Frédéric Poliquin <frederic.poliquin@dti.ulaval.ca>",
     "private": false,
