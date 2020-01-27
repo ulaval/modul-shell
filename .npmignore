@@ -7,3 +7,4 @@ tests
 .htmlhintrc
 *.tgz
 tsconfig.json
+npm-cache
